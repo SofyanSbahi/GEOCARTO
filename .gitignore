@@ -1,0 +1,14 @@
+# Dépendances et caches
+node_modules/
+__pycache__/
+*.pyc
+
+# Sorties des outils de test navigateur (tools/stage, tools/e2e)
+shots/
+tools/**/shots/
+test-results/
+*.log
+
+# Divers
+.DS_Store
+Thumbs.db
