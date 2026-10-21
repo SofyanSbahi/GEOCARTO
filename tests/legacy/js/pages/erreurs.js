@@ -1,0 +1,6 @@
+import {ERRORS,ERR_CATS,byId} from '../data/errors.js';
+import {state} from '../core/store.js';
+import {fitCanvas} from '../core/util.js';
+export default async function(root,{a}){const cnt=state().errors;
+ if(a&&byId[a]){const e=byId[a];root.innerHTML=`<div class="crumb"><a href="#/erreurs">Bibliothèque des erreurs</a></div><h1>🔎 ${e.t}</h1><div class="card"><p><span class="tag acc">Symptôme</span>${e.s}</p><p><span class="tag">Pourquoi</span>${e.w}</p><div class="box tip"><b class="t">Comment corriger</b>${e.f}</div><p class="mute">Rencontrée ${cnt[e.id]||0} fois dans tes travaux.</p><div class="row"><a class="btn" href="${e.to}">S'entraîner</a>${e.ch?`<a class="btn sec" href="#/exos/${e.ch}">Exercices du chapitre</a>`:''}</div></div>`;return}
+ root.innerHTML=`<h1>🔎 Bibliothèque des erreurs fréquentes</h1><p class="lead">Chaque fiche explique le symptôme, la cause et le remède. Les erreurs détectées dans tes travaux sont comptées.</p>${Object.entries(ERR_CATS).map(([k,n])=>`<h2>${n}</h2><div class="grid g2">${ERRORS.filter(e=>e.cat===k).map(e=>`<a class="node" href="#/erreurs/${e.id}"><span class="dot">${cnt[e.id]?cnt[e.id]:'?'}</span><span><b>${e.t}</b><small>${e.s}</small></span></a>`).join('')}</div>`).join('')}`}

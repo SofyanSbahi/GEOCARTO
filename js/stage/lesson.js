@@ -1,0 +1,270 @@
+/* Mode Stage v2 — exécution d'une LEÇON (suite de scènes) en projection.
+   Routes : #/stage (index des 11 thèmes) · #/stage/<leçon>[/n] (projection, n = scène) · #/stage/<leçon>/presenter (vue enseignant).
+   Modèle : leçon → scènes → étapes. Une scène = UNE idée ; une étape = UN élément révélé. → / espace : étape suivante ; ← : précédente ;
+   ↑ ↓ : paramètre de la scène ; a b c d : votes ; B : écran vide ; T : thème ; + − : taille de salle ; F : plein écran ; P : présentateur ; Échap : sortir.
+   Rien n'est dessiné en pixels : tout est dans le repère logique 160×70 de kit.js (même rendu, du smartphone à l'amphi). */
+import './fr.js';
+import './lessons/fr.js';
+import { t, nf, setLang, has } from './i18n.js';
+import * as K from './kit.js';
+import { TOPICS, lessonById } from './lessons/index.js';
+import { h } from '../core/util.js';
+import { loadPrefs, savePrefs, logVote, unitPx, fmtClock, safeHtml, words, passiveRun, mazur } from './tools.js';
+import { pickExo } from '../engine/pedagogy/index.js';
+
+const ICON = {
+  prev: '<path d="M15 5l-7 7 7 7"/>', next: '<path d="M9 5l7 7-7 7"/>', up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
+  blank: '<rect x="5" y="5" width="14" height="14" fill="currentColor"/>', full: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  present: '<rect x="3" y="4" width="13" height="10" rx="1"/><path d="M8 19h13V9h-3"/>', help: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.4v.4"/>',
+  theme: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor"/>', exit: '<path d="M6 6l12 12M18 6L6 18"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>', minus: '<path d="M5 12h14"/>', regen: '<path d="M20 12a8 8 0 11-2.6-5.9M20 4v5h-5"/>'
+};
+const ic = (d, s = '') => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${s}>${d}</svg>`;
+const kindIc = k => ic(`<path d="${K.KINDS[k].ic}"/>`);
+const LET = 'ABCD';
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+/* ---------- accès aux données d'une scène ---------- */
+export const stepsOf = (sc, ctx) => sc.kind === 'vote' || sc.practice ? 3 : typeof sc.steps === 'function' ? sc.steps(ctx) : (sc.steps || 1);
+export const paramOf = (sc, pi) => sc.param ? sc.param.values[Math.min(pi, sc.param.values.length - 1)] : null;
+const key = (L, sc, k) => `${L.id}.${sc.id}.${k}`;
+function capKey(L, sc, st) { for (let k = st; k >= 0; k--) if (has(key(L, sc, 'c' + k))) return key(L, sc, 'c' + k); return null; }
+const wrap = K.wrap; // (encore utilisé par d'autres modules)
+
+/* ---------- exercices du moteur (scènes « practice ») : courts, pour être lus de loin ---------- */
+const exoCache = new Map();
+function exoFor(sc, seed) {
+  const k = sc.id + '|' + seed; if (exoCache.has(k)) return exoCache.get(k);
+  let ex = null;
+  for (let i = 0; i < 40 && !ex; i++) { const e = pickExo(sc.practice.ch, seed * 31 + i * 7 + 1); if (words(e.prompt) <= (sc.practice.maxWords || 34)) ex = e; }
+  ex = ex || pickExo(sc.practice.ch, seed); exoCache.set(k, ex); return ex;
+}
+const fmtAns = f => { const a = f.a, r = Math.abs(a) >= 100 ? Math.round(a) : Math.round(a * 100) / 100; return `${f.l} ${nf(r, 2)} ${f.u || ''}`.trim(); };
+
+/* =====================================================================
+   Figure d'un vote : question à gauche, 4 cartes lettrées à droite, barres de résultat, puis correction nommée
+   ===================================================================== */
+function voteFig(L, sc, S, X) {
+  const v = sc.vote, m = v.opts.length, tot = S.votes[sc.id] || new Array(m).fill(0), sum = tot.reduce((a, b) => a + b, 0), st = S.st;
+  let out = '';
+  /* gauche : figure de la scène ou, à défaut, la question en grand */
+  if (v.draw) out += K.g(v.draw(st, X), {});
+  else { const f = K.fit(v.qText ? v.qText(X) : t(key(L, sc, 'q')), 78, 6.4, 4); out += K.txtL(46, 34 - (f.lines.length - 1) * f.size * .65, f.lines, { size: f.size, lh: f.size * 1.3, w: 800, fixed: true }); }
+  const ch = (66 - (m - 1) * 1.6) / m, x0 = 90, w = 68;
+  v.opts.forEach((o, i) => {
+    const y = 2 + i * (ch + 1.6), ok = o.ok, rev = st >= 2, dim = rev && !ok;
+    const col = rev && ok ? K.C.green : K.C.ink;
+    let c = K.rect(x0, y, w, ch, { fill: rev && ok ? '#e3f5ea' : K.C.paper, stroke: col, w: rev && ok ? 1 : .6, rx: 1.4 });
+    c += K.badge(x0 + 5.2, y + ch / 2, LET[i], { r: 3.4, fill: col, size: 4.6 });
+    const f = K.fit(v.label ? v.label(i, X) : t(key(L, sc, 'o' + i)), 37, 4.2, 2);
+    c += K.txtL(x0 + 10.5, y + ch / 2 - (f.lines.length - 1) * f.size * .58, f.lines, { size: f.size, lh: f.size * 1.16, anchor: 'start', w: 800, fixed: true });
+    if (st >= 1) {
+      const n = tot[i] || 0, bw = sum ? (w - 3) * n / sum : 0;
+      c += K.rect(x0 + 1.5, y + ch - 2.6, w - 3, 1.5, { fill: K.C.soft, rx: .7 }) + (bw ? K.rect(x0 + 1.5, y + ch - 2.6, bw, 1.5, { fill: rev ? (ok ? K.C.green : K.C.red) : K.C.blue, rx: .7 }) : '');
+      c += K.txt(x0 + w - 14, y + ch / 2 - .4, String(n), { size: 5.4, anchor: 'end', w: 800 });
+      const pre = S.pre && S.pre[sc.id], ps = pre ? pre.reduce((a, b) => a + b, 0) : 0;
+      if (ps) c += K.rect(x0 + 1.5, y + ch - 1.05, (w - 3) * (pre[i] || 0) / ps, .8, { fill: K.C.mute, rx: .4 });
+    }
+    if (rev) c += ok ? K.path(`M${x0 + w - 9.4} ${y + ch / 2 + .6}l2 2.2l4.2-5`, { stroke: K.C.green, w: 1.1 }) : K.path(`M${x0 + w - 9.2} ${y + ch / 2 - 1.7}l3.4 3.4M${x0 + w - 5.8} ${y + ch / 2 - 1.7}l-3.4 3.4`, { stroke: K.C.red, w: 1 });
+    out += K.el('g', { 'data-vote': i, class: 'st-l-card' + (dim ? ' dim' : ''), role: 'button' }, c);
+  });
+  return out;
+}
+/* diagnostic : l'option fausse la plus choisie → malentendu NOMMÉ (ids de data/errors.js ou propres au Stage) */
+function diagnosis(sc, S) {
+  const tot = S.votes[sc.id] || [], opts = sc.vote.opts; let best = -1, bi = -1;
+  opts.forEach((o, i) => { if (!o.ok && (tot[i] || 0) > best) { best = tot[i] || 0; bi = i; } });
+  return best > 0 ? { i: bi, id: opts[bi].mis, n: best } : null;
+}
+
+/* =====================================================================
+   PROJECTION
+   ===================================================================== */
+export function mountLesson(root, id, arg) {
+  const L = lessonById(id); if (!L) return lessonIndex(root);
+  if (arg === 'presenter') return mountPresenter(root, L);
+  const prefs = loadPrefs(); setLang(prefs.lang || 'fr');
+  const S = { pre: {}, sc: Math.max(0, Math.min(L.scenes.length - 1, (+arg || 1) - 1)), st: 0, pi: 0, rs: prefs.rs || 1, theme: prefs.theme || 'light', seed: prefs.seed || L.seed || 12, votes: {}, blank: false, help: false, fwd: true, tEnd: 0, tTot: 0 };
+  document.body.classList.add('stage-on');
+  const el = h('div', { class: 'stg st-l', 'data-theme': S.theme });
+  el.innerHTML = `<header class="st-l-top"><span class="st-l-kind" id="lKind"></span><h1 class="st-l-claim" id="lClaim"></h1><span class="st-l-n" id="lN"></span></header>
+   <main class="st-l-fig" id="lFig"><svg id="lSvg" viewBox="0 0 ${K.W} ${K.H}" preserveAspectRatio="xMidYMid meet" role="img"></svg><div class="st-l-ov" id="lOv"></div></main>
+   <footer class="st-l-cap"><p class="st-l-text" id="lCap" aria-live="polite"></p><div class="st-l-side" id="lSide"></div></footer>
+   <nav class="st-l-rail" id="lRail" aria-label="${esc(t('lk.rail'))}"></nav>
+   <div class="st-l-tools" id="lTools"></div><div class="st-l-blank" id="lBlank"></div><div class="st-l-help" id="lHelp" role="dialog"></div>
+   <div class="st-l-test" id="lTest" role="dialog"><h2>${t('lk.test.title')}</h2><p class="st-l-tp">${t('lk.test.how')}</p>
+    <div class="st-l-trow"><b>A</b><span style="font-size:calc(var(--u)*3.4)">${t('lk.test.a')} — Éq = 40 m · 720 m · 640 m</span></div>
+    <div class="st-l-trow"><b>B</b><span style="font-size:calc(var(--u)*4.9)">${t('lk.test.b')} — Éq = 40 m</span></div>
+    <div class="st-l-trow"><b>C</b><span style="font-size:calc(var(--u)*7)">${t('lk.test.c')} 720 m</span></div>
+    <p class="st-l-tp" id="lTestRs"></p></div>`;
+  root.append(el);
+  const $ = s => el.querySelector(s);
+  const ctxCache = new Map(), ctx = () => { const k = S.seed; if (!ctxCache.has(k)) ctxCache.set(k, L.setup ? L.setup(k) : {}); return ctxCache.get(k); };
+  const nS = () => stepsOf(L.scenes[S.sc], ctx());
+  let ch = null; try { ch = new BroadcastChannel('gc-stage-L-' + L.id); } catch (e) { }
+  const TOOLS = [['prev', 'lk.prev', '←'], ['next', 'lk.next', '→'], '|', ['minus', 'lk.smaller', '−'], ['plus', 'lk.bigger', '+'], ['theme', 'lk.theme', 'T'], ['blank', 'lk.blank', 'B'], ['full', 'lk.full', 'F'], ['present', 'lk.present', 'P'], ['help', 'lk.help', 'H'], ['exit', 'lk.exit', 'Esc']];
+  $('#lTools').innerHTML = TOOLS.map(x => x === '|' ? '<i class="st-sep"></i>' : `<button class="st-b" data-act="${x[0]}" aria-label="${esc(t(x[1]))}" title="${esc(t(x[1]))} (${x[2]})">${ic(ICON[x[0]])}</button>`).join('');
+  $('#lRail').innerHTML = L.scenes.map((s, i) => `<button class="st-l-dot" data-go="${i}" data-kind="${s.kind}" aria-label="${esc(t(key(L, s, 'claim')))}">${kindIc(s.kind)}</button>`).join('');
+  $('#lHelp').innerHTML = `<div class="st-l-hbox"><h2>${t('lk.helpTitle')}</h2>${['→ / Espace|lk.h.next', '←|lk.h.prev', '↑ ↓|lk.h.param', 'A B C D|lk.h.vote', 'B|lk.h.blank', 'T|lk.h.theme', '+ −|lk.h.size', 'R|lk.h.revote', 'N|lk.h.regen', 'K|lk.h.test', 'F · P · Échap|lk.h.misc'].map(r => { const [k, v] = r.split('|'); return `<div class="st-l-hrow"><kbd>${k}</kbd><span>${t(v)}</span></div>`; }).join('')}</div>`;
+
+  const post = () => ch && ch.postMessage({ t: 'state', S: { sc: S.sc, st: S.st, pi: S.pi, seed: S.seed, votes: S.votes, pre: S.pre, steps: nS() } });
+  let timerI = 0;
+
+  function render() {
+    const sc = L.scenes[S.sc], cx = ctx(), n = nS(), pv = paramOf(sc, S.pi);
+    S.st = Math.max(0, Math.min(S.st, n - 1));
+    el.dataset.theme = S.theme; el.style.setProperty('--u', unitPx(S.rs) + 'px');
+    K.room(S.rs, innerWidth / innerHeight); K.direction(S.fwd);
+    const X = { t, nf, ctx: cx, pi: S.pi, seed: S.seed, rs: S.rs, scene: sc, lesson: L };
+    let inner = '';
+    if (sc.kind === 'vote') inner = voteFig(L, sc, S, X); else if (sc.fig) inner = sc.fig(S.st, pv, X);
+    $('#lSvg').innerHTML = inner;
+    $('#lSvg').setAttribute('aria-label', t(key(L, sc, 'claim')));
+    $('#lKind').innerHTML = `${kindIc(sc.kind)}<span>${t('kind.' + sc.kind)}</span>`; $('#lKind').dataset.kind = sc.kind;
+    $('#lClaim').textContent = t(key(L, sc, 'claim'));
+    $('#lN').textContent = `${S.sc + 1} / ${L.scenes.length}`;
+    $('#lTestRs').textContent = t('lk.test.rs', { rs: nf(S.rs, 2) });
+    /* légende */
+    let cap = '';
+    if (sc.cap) { const r = sc.cap(S.st, pv, X); cap = r ? t(r[0], r[1]) : ''; } else { const k = capKey(L, sc, S.st); cap = k ? t(k, sc.capVars ? sc.capVars(S.st, pv, X) : undefined) : ''; }
+    if (sc.kind === 'vote' && S.st >= 2) {
+      const d = diagnosis(sc, S), ok = sc.vote.opts.findIndex(o => o.ok);
+      cap = `<b class="st-l-ok">${LET[ok]} — ${sc.vote.solText ? sc.vote.solText(X) : t(key(L, sc, 'sol'))}</b>` + (d ? `<span class="st-l-mis"><b>${LET[d.i]}</b> (${d.n}) · ${t('mis.' + d.id)} — ${t('mis.' + d.id + '.why')}</span>` : '');
+    } else cap = esc(cap).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    $('#lCap').innerHTML = cap;
+    /* panneau latéral : paramètre ↑↓, minuteur */
+    let side = '';
+    if (sc.param) side += `<div class="st-l-par"><button class="st-b" data-act="pdn" aria-label="−">${ic(ICON.down)}</button><span class="st-l-pv">${esc(sc.param.label(pv, S.pi, X))}</span><button class="st-b" data-act="pup" aria-label="+">${ic(ICON.up)}</button></div>`;
+    if (sc.kind === 'vote' && S.st >= 1) { const sum = (S.votes[sc.id] || []).reduce((a, b) => a + b, 0); side += `<div class="st-l-tally">${t('lk.votes', { n: sum })}</div>`; const mz = S.st === 1 ? mazur(S.votes[sc.id], sc.vote.opts.findIndex(o => o.ok)) : null; if (mz) side += `<div class="st-l-pi pi-${mz.band}"><b>${mz.pct} %</b> ${t('pi.' + mz.band)}${S.pre[sc.id] ? ` <i>${t('pi.round2')}</i>` : ''}</div>`; }
+    if (sc.practice) side += `<div class="st-l-timer" id="lTimer"><i></i><b></b></div>`;
+    $('#lSide').innerHTML = side;
+    /* superposition HTML : exercice du moteur */
+    const ov = $('#lOv'); ov.innerHTML = ''; ov.className = 'st-l-ov';
+    if (sc.practice && sc.practice.ch) {
+      const ex = exoFor(sc, S.seed);
+      let b = `<div class="st-l-prq">${safeHtml(ex.prompt).replace(/<b>/g, '<b class="st-l-hl">')}</div>`;
+      if (ex.choices) b += `<div class="st-l-pro">${ex.choices.o.map((o, i) => `<div class="st-l-po${S.st >= 2 ? (i === ex.choices.a ? ' ok' : ' dim') : ''}"><b>${LET[i]}</b><span>${esc(o)}</span></div>`).join('')}</div>`;
+      else if (S.st >= 2) b += `<div class="st-l-pra">${ex.fields.map(f => `<div>${esc(fmtAns(f))}</div>`).join('')}</div>`;
+      if (S.st >= 2 && ex.sol && words(ex.sol) <= 30) b += `<div class="st-l-sol">${esc(safeHtml(ex.sol).replace(/<[^>]*>/g, ''))}</div>`;
+      ov.innerHTML = b; ov.classList.add('on');
+    }
+    /* rail */
+    const kinds = L.scenes.map(s => s.kind), run = passiveRun(kinds, S.sc, K.ACTIVE);
+    el.querySelectorAll('.st-l-dot').forEach((d, i) => { d.classList.toggle('on', i === S.sc); d.classList.toggle('dn', i < S.sc); });
+    $('#lRail').classList.toggle('warn', run >= 4);
+    /* timer */
+    clearInterval(timerI);
+    if (sc.practice) {
+      if (S.st === 1 && !S.tEnd) { S.tTot = sc.practice.seconds || 120; S.tEnd = Date.now() + S.tTot * 1000; }
+      if (S.st !== 1) S.tEnd = S.st === 0 ? 0 : S.tEnd;
+      const tick = () => { const T = $('#lTimer'); if (!T) return; const left = S.st === 1 && S.tEnd ? (S.tEnd - Date.now()) / 1000 : (S.st === 0 ? (sc.practice.seconds || 120) : 0);
+        T.querySelector('b').textContent = fmtClock(left); T.style.setProperty('--p', S.st === 1 && S.tTot ? Math.max(0, left / S.tTot) : S.st === 0 ? 1 : 0); T.classList.toggle('end', S.st === 1 && left <= 0); };
+      tick(); timerI = setInterval(tick, 250);
+    } else S.tEnd = 0;
+    el.querySelector('#lFig').classList.remove('st-l-swap'); void el.offsetWidth; if (S.swap) { el.querySelector('#lFig').classList.add('st-l-swap'); S.swap = false; }
+    try { history.replaceState(null, '', `#/stage/${L.id}/${S.sc + 1}`); } catch (e) { }
+    post();
+  }
+  const go = (sc, st) => { S.fwd = sc > S.sc || (sc === S.sc && st >= S.st); if (sc !== S.sc) { S.swap = true; S.pi = L.scenes[sc].param?.start || 0; S.tEnd = 0; } S.sc = sc; S.st = st; render(); };
+  const next = () => { const n = nS(); if (S.st < n - 1) go(S.sc, S.st + 1); else if (S.sc < L.scenes.length - 1) go(S.sc + 1, 0); else { location.hash = '#/stage'; } };
+  const prev = () => { if (S.st > 0) go(S.sc, S.st - 1); else if (S.sc > 0) { const p = S.sc - 1; go(p, stepsOf(L.scenes[p], ctx()) - 1); } };
+  const param = d => { const sc = L.scenes[S.sc]; if (!sc.param) return; const n = sc.param.values.length; S.pi = (S.pi + d + n) % n; S.fwd = true; render(); };
+  const vote = (i, d = 1) => { const sc = L.scenes[S.sc]; if (sc.kind !== 'vote' || i >= sc.vote.opts.length) return; const a = S.votes[sc.id] || (S.votes[sc.id] = new Array(sc.vote.opts.length).fill(0)); a[i] = Math.max(0, a[i] + d); if (S.st === 0) S.st = 1; S.fwd = false; render(); };
+  const logIt = () => { const sc = L.scenes[S.sc]; if (sc.kind === 'vote') logVote({ lesson: L.id, scene: sc.id, votes: S.votes[sc.id] || [], pre: S.pre[sc.id] || null, ok: sc.vote.opts.findIndex(o => o.ok) }); };
+  /* R : 1er tour terminé → on garde l'ancien tally en « avant » (barre grise) et on repart de zéro pour le revote après discussion */
+  const revote = () => { const sc = L.scenes[S.sc]; if (sc.kind !== 'vote' || S.st !== 1 || S.pre[sc.id]) return; const cur = S.votes[sc.id]; if (!cur || !cur.some(Boolean)) return; S.pre[sc.id] = cur.slice(); S.votes[sc.id] = new Array(cur.length).fill(0); S.fwd = false; render(); };
+  const act = a => {
+    if (a === 'prev') prev(); else if (a === 'next') { if (L.scenes[S.sc].kind === 'vote' && S.st === 1) logIt(); next(); }
+    else if (a === 'revote') revote(); else if (a === 'pup') param(1); else if (a === 'pdn') param(-1);
+    else if (a === 'blank') { S.blank = !S.blank; $('#lBlank').classList.toggle('on', S.blank); }
+    else if (a === 'theme') { S.theme = S.theme === 'light' ? 'dark' : 'light'; savePrefs({ theme: S.theme }); render(); }
+    else if (a === 'plus' || a === 'minus') { S.rs = Math.round(Math.min(2.5, Math.max(.8, S.rs + (a === 'plus' ? .1 : -.1))) * 100) / 100; savePrefs({ rs: S.rs }); render(); }
+    else if (a === 'regen') { if (L.setup) { S.seed = S.seed + 1; savePrefs({ seed: S.seed }); S.st = 0; render(); } }
+    else if (a === 'full') { try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); } catch (e) { } }
+    else if (a === 'present') window.open(location.href.replace(/#.*$/, '') + '#/stage/' + L.id + '/presenter', 'gc-stage-pv', 'popup,width=1100,height=760');
+    else if (a === 'help') { S.help = !S.help; $('#lHelp').classList.toggle('on', S.help); }
+    else if (a === 'test') { S.test = !S.test; $('#lTest').classList.toggle('on', S.test); render(); }
+    else if (a === 'exit') location.hash = '#/stage';
+  };
+  el.addEventListener('click', e => {
+    const c = e.target.closest('[data-vote]'); if (c) { vote(+c.dataset.vote, e.shiftKey ? -1 : 1); return; }
+    const b = e.target.closest('[data-act]'); if (b) { act(b.dataset.act); return; }
+    const d = e.target.closest('[data-go]'); if (d) { go(+d.dataset.go, 0); return; }
+    if (S.test) { act('test'); return; }
+    if (S.help) { act('help'); return; }
+    if (S.blank) { act('blank'); return; }
+    if (e.target.closest('.st-l-top,.st-l-rail,.st-l-tools')) return;
+    const r = el.getBoundingClientRect(); (e.clientX - r.left) < r.width * .2 ? prev() : act('next');
+  });
+  const KEYS = { ArrowRight: 'next', PageDown: 'next', ' ': 'next', Enter: 'next', ArrowLeft: 'prev', PageUp: 'prev', Backspace: 'prev', ArrowUp: 'pup', ArrowDown: 'pdn', b: 'blank', B: 'blank', '.': 'blank', t: 'theme', T: 'theme', '+': 'plus', '=': 'plus', '-': 'minus', _: 'minus', n: 'regen', N: 'regen', f: 'full', F: 'full', p: 'present', P: 'present', h: 'help', H: 'help', '?': 'help', k: 'test', K: 'test', r: 'revote', R: 'revote', Escape: 'exit' };
+  const onKey = e => {
+    if (e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    const vi = 'abcd'.indexOf(e.key.toLowerCase()), vn = '1234'.indexOf(e.key);
+    if (L.scenes[S.sc].kind === 'vote' && (vi >= 0 || vn >= 0)) { e.preventDefault(); vote(vi >= 0 ? vi : vn, e.shiftKey ? -1 : 1); return; }
+    if (e.key === 'Home') { go(0, 0); return; } if (e.key === 'End') { go(L.scenes.length - 1, 0); return; }
+    const a = KEYS[e.key]; if (!a) return;
+    if (a === 'exit' && S.test) { act('test'); return; } if (a === 'exit' && S.help) { act('help'); return; } if (a === 'exit' && S.blank) { act('blank'); return; }
+    e.preventDefault(); act(a);
+  };
+  addEventListener('keydown', onKey);
+  let idleT = 0; el.addEventListener('pointermove', () => { el.classList.add('act'); clearTimeout(idleT); idleT = setTimeout(() => el.classList.remove('act'), 2600); });
+  const onResize = () => render(); addEventListener('resize', onResize);
+  if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'hello') post(); else if (m.t === 'cmd') { if (m.a === 'goto') go(m.v, 0); else if (m.a === 'vote') vote(m.v); else if (m.a === 'unvote') vote(m.v, -1); else act(m.a); } };
+  render();
+  return () => { document.body.classList.remove('stage-on'); clearInterval(timerI); removeEventListener('keydown', onKey); removeEventListener('resize', onResize); ch && ch.close(); el.remove(); };
+}
+
+/* =====================================================================
+   PRÉSENTATEUR : notes, question à poser, votes, minuteur, commandes — sur l'écran de l'enseignant
+   ===================================================================== */
+function mountPresenter(root, L) {
+  setLang(loadPrefs().lang || 'fr');
+  document.body.classList.add('stage-pv');
+  const S = { sc: 0, st: 0, steps: 1, votes: {} }; let live = false, t0 = Date.now(), ts = Date.now(), last = -1;
+  const el = h('div', { class: 'pv' }); root.append(el);
+  el.innerHTML = `<h1>${esc(t(L.title))}</h1><p class="pv-status" id="pvStat"></p><div class="pv-grid"><section class="pv-main"><div class="pv-scene" id="pvScene"></div>
+   <div class="pv-card"><h3>${t('pres.note')}</h3><p id="pvNote"></p></div><div class="pv-card ask"><h3>${t('pres.question')}</h3><p id="pvAsk"></p></div><div class="pv-card" id="pvVotes"></div><div class="pv-card"><h3>${t('pres.next')}</h3><p id="pvNext"></p></div></section>
+   <section class="pv-side"><div class="pv-card"><h3>${t('pres.timer')}</h3><p class="pv-time"><b id="pvT"></b> · ${t('pres.sceneTimer')} <b id="pvTs"></b></p></div>
+   <div class="pv-card"><h3>${t('pres.controls')}</h3><div class="pv-btns">${[['prev', t('lk.prev')], ['next', t('lk.next')], ['pdn', '−'], ['pup', '+'], ['regen', t('lk.regen')], ['blank', t('lk.blank')]].map(([a, l]) => `<button class="pv-b" data-a="${a}">${esc(l)}</button>`).join('')}</div>
+   <div class="pv-btns">${[0, 1, 2, 3].map(i => `<button class="pv-b" data-a="vote" data-v="${i}">+ ${LET[i]}</button>`).join('')}<button class="pv-b" data-a="revote">${t('pi.revote')}</button></div><div id="pvPi"></div></div>
+   <div class="pv-card"><h3>${t('pres.scenes')}</h3><div class="pv-list" id="pvList">${L.scenes.map((s, i) => `<button class="pv-b l" data-a="goto" data-v="${i}">${i + 1}. ${esc(t(key(L, s, 'claim')))}</button>`).join('')}</div></div></section></div>`;
+  const $ = s => el.querySelector(s);
+  let ch = null; try { ch = new BroadcastChannel('gc-stage-L-' + L.id); } catch (e) { }
+  const send = (a, v) => ch && ch.postMessage({ t: 'cmd', a, v });
+  el.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) send(b.dataset.a, b.dataset.v != null ? +b.dataset.v : undefined); });
+  const draw = () => {
+    const sc = L.scenes[S.sc]; if (S.sc !== last) { ts = Date.now(); last = S.sc; }
+    $('#pvScene').innerHTML = `<span class="pv-no">${S.sc + 1}</span><div><h2>${esc(t(key(L, sc, 'claim')))}</h2><p>${t('kind.' + sc.kind)} · ${t('lk.step', { a: S.st + 1, b: S.steps })}</p></div>`;
+    $('#pvNote').textContent = has(key(L, sc, 'note')) ? t(key(L, sc, 'note')) : '—'; $('#pvAsk').textContent = has(key(L, sc, 'ask')) ? t(key(L, sc, 'ask')) : '—';
+    const nx = L.scenes[S.sc + 1]; $('#pvNext').textContent = nx ? t(key(L, nx, 'claim')) : '—';
+    el.querySelectorAll('#pvList .pv-b').forEach((b, i) => b.classList.toggle('on', i === S.sc));
+    const v = S.votes[sc.id]; $('#pvVotes').style.display = sc.kind === 'vote' ? '' : 'none';
+    if (sc.kind === 'vote') { const sum = (v || []).reduce((a, b) => a + b, 0) || 1; $('#pvVotes').innerHTML = `<h3>${t('lk.votes', { n: (v || []).reduce((a, b) => a + b, 0) })}</h3>` + ((m) => m ? `<div class="st-l-pi pi-${m.band}"><b>${m.pct} %</b> ${t('pi.' + m.band)}</div>` : '')(mazur(v, sc.vote.opts.findIndex(o => o.ok))) + sc.vote.opts.map((o, i) => `<div class="pv-bar"><b>${LET[i]}</b><i style="width:${Math.round(100 * ((v || [])[i] || 0) / sum)}%"></i><span>${(v || [])[i] || 0}</span></div>`).join(''); }
+  };
+  const stat = () => { $('#pvStat').textContent = live ? t('pres.connected') : t('pres.waiting'); $('#pvStat').className = 'pv-status ' + (live ? 'ok' : ''); };
+  if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'state') { Object.assign(S, m.S); live = true; stat(); draw(); } };
+  const fmt = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const tick = setInterval(() => { $('#pvT').textContent = fmt(Date.now() - t0); $('#pvTs').textContent = fmt(Date.now() - ts); }, 500);
+  draw(); stat(); ch && ch.postMessage({ t: 'hello' });
+  if (!ch || location.protocol === 'file:') el.insertBefore(h('p', { class: 'pv-warn' }, t('pres.noSync')), el.children[2]);
+  return () => { document.body.classList.remove('stage-pv'); clearInterval(tick); ch && ch.close(); el.remove(); };
+}
+
+/* =====================================================================
+   INDEX : les 11 thèmes du TP, dans l'ordre du cours
+   ===================================================================== */
+export function lessonIndex(root) {
+  setLang(loadPrefs().lang || 'fr');
+  const cards = TOPICS.map(tp => {
+    const L = tp.id ? lessonById(tp.id) : null;
+    const min = L ? (tp.scene ? 0 : L.scenes.reduce((a, s) => a + (s.min || 2), 0)) : 0;
+    const href = L && !L.planned ? `#/stage/${L.id}${tp.scene ? '/' + tp.scene : ''}` : tp.legacy ? `#/stage/${tp.legacy.deck}/${tp.legacy.scene}` : null;
+    const state = L && !L.planned ? 'v2' : tp.legacy ? 'v1' : 'plan';
+    const inner = `<span class="st-ix-n">${tp.n}</span><span class="st-ix-b"><b>${esc(t('topic.' + tp.n))}</b><small>${esc(t('topic.' + tp.n + '.d'))}</small></span><span class="st-ix-s st-ix-${state}">${t('ix.' + state)}${min ? ` · ${min} min` : ''}</span>`;
+    return href ? `<a class="st-ix-c" href="${href}">${inner}</a>` : `<div class="st-ix-c off">${inner}</div>`;
+  }).join('');
+  const pro = lessonById('mission'), proCard = pro ? `<a class="st-ix-c st-ix-pro" href="#/stage/mission"><span class="st-ix-n">0</span><span class="st-ix-b"><b>${esc(t('ix.pro'))}</b><small>${esc(t('ix.pro.d'))}</small></span><span class="st-ix-s st-ix-v2">${t('ix.v2')} · ${pro.scenes.reduce((a, s) => a + (s.min || 2), 0)} min</span></a>` : '';
+  root.innerHTML = `<h1>🎞️ ${t('ix.title')}</h1><p class="lead">${t('ix.lead')}</p><div class="st-ix">${proCard}${cards}</div>
+   <div class="box tip"><b class="t">💡</b>${t('ix.tip')}</div>
+   <p><a class="btn" href="#/stage/courbes/presenter">${t('ix.v1pres')}</a> <a class="btn" href="#/stage/lib">${t('lib.title')}</a> <a class="btn" href="#/stage/bilan">${t('bilan.title')}</a></p>`;
+}
