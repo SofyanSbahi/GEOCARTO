@@ -11,8 +11,12 @@ import { apparentDip } from '../../engine/geology/index.js';
 import { recapFig } from './mission.js';
 const { C, txt, line, rect, circ, path, poly, arrow, at, badge, tag } = K;
 
-const RAD = Math.PI / 180, SEC = { x: 10, y: 3, w: 144, h: 50 };
-const bot = (label, o = {}) => callout(80, 61, label, { w: 122, lines: 2, size: 5.4, ...o });
+const RAD = Math.PI / 180;
+/* Bandeau d'énoncé au bas de la figure : il grandit avec la salle / le format 4:3 (K.fs) mais reste dans une bande de BOT_MAX u ; les coupes au-dessus
+   cèdent exactement la hauteur gagnée par le texte (SEC.h) — sinon le bandeau recouvre le bas des coupes (audit v3.1, formats 4:3 / 5:4 / amphi). */
+const BOT_MAX = 24, over = () => Math.min(Math.max(0, K.calloutH() - 17), BOT_MAX - 17);
+export const SEC = { x: 10, y: 3, w: 144, get h() { return 50 - over() - 1.5; } };
+const bot = (label, o = {}) => callout(80, 61, label, { w: 122, lines: 2, size: 5.4, maxH: BOT_MAX, ...o });
 const sense = (S0, dipAz) => Math.cos((dipAz - S0.az) * RAD) >= 0 ? 1 : -1;       // +1 : les contacts descendent vers B (à droite)
 const ms = () => { const M = missionGeo(); return { M, s: S.sectionOf(M, M.A, M.B) }; };
 const ab = (F, s, quiet = true) => { const y = F.box.y + F.box.h + 3.4; return badge(F.X(0), y, 'A', { r: 2.6, fill: C.acc, quiet }) + badge(F.X(s.L), y, 'B', { r: 2.6, fill: C.acc, quiet }); };
@@ -85,7 +89,9 @@ export const coupe = {
         const AB = [[14, 38], [62, 38]], CD = [[20, 46], [20 + 44 * Math.cos(beta * R), 46 - 44 * Math.sin(beta * R)]];
         o += at(st, 1, arrow(AB[0][0], AB[0][1], AB[1][0], AB[1][1], { c: C.blue, w: 1.1, head: 3 }) + rect(76, 4, 78, 22, { fill: '#fff', stroke: C.ink, w: .5, rx: 1 }) + line(78, 10, 152, 10, { c: C.ink, w: .8 }) + line(104, 10, 130, 10 + 26 * Math.tan(dip * R), { c: C.blue, w: 1.6 }) + tag(137, 20, `${dip}°`, { size: 4.6, fill: C.blue }), { rest: st > 1 });
         o += at(st, 2, arrow(CD[0][0], CD[0][1], CD[1][0], CD[1][1], { c: C.green, w: 1.1, head: 3 }) + rect(76, 28, 78, 22, { fill: '#fff', stroke: C.ink, w: .5, rx: 1 }) + line(78, 33, 152, 33, { c: C.ink, w: .8 }) + line(104, 33, 130, 33 + 26 * Math.tan(app * R), { c: C.green, w: 1.6 }) + tag(137, 44, `${X.nf(app, 0)}°`, { size: 4.6, fill: C.green }), { rest: st > 2 });
-        return o + [bot(X.t('coupe.apparent.t0')), bot(X.t('coupe.apparent.t1')), bot(X.t('coupe.apparent.t2')), bot(X.t('coupe.apparent.t3', { b: beta }), { fill: C.acc })][st];
+        /* schéma en coordonnées fixes : réduit autour de x = 80 pour laisser sa place au bandeau (SEC.h / 50) */
+        const kf = SEC.h / 50;
+        return K.g(o, { transform: `translate(80 0) scale(${kf.toFixed(3)}) translate(-80 0)` }) + [bot(X.t('coupe.apparent.t0')), bot(X.t('coupe.apparent.t1')), bot(X.t('coupe.apparent.t2')), bot(X.t('coupe.apparent.t3', { b: beta }), { fill: C.acc })][st];
       } },
     { id: 'ev', kind: 'show', steps: 3, min: 2, param: { values: [1, 2, 3], start: 0, label: (v, i, X) => X.t('coupe.ev.p', { n: v }) },
       fig: (st, ev, X) => {

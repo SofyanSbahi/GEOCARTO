@@ -1,6 +1,6 @@
 # GéoCarto v3.1 — « Raisonner, pas réciter » · plan de mise en œuvre
 
-> Statut : **plan approuvé, implémentation non commencée** · version 1.0 · 2026-10-21
+> Statut : **WP0 et WP1 réalisés** (2026-10-21) ; WP2 à WP7 à venir · version 1.1
 > Public visé : étudiants de première année de géologie, sans acquis en topographie, cartographie ni raisonnement géologique.
 > Ce document évolue avec les versions : mettre à jour la section 9 (journal) à chaque jalon.
 
@@ -168,3 +168,38 @@ Taille : S petite · M moyenne · L grande. Ordre d'exécution : WP0 → WP1 →
 | Date | Événement |
 |---|---|
 | 2026-10-21 | Plan v1.0 rédigé après audit visuel des 27 scènes (103 écrans) ; décisions D1–D5 enregistrées. Aucun code modifié. |
+| 2026-10-21 | **WP0 + WP1 réalisés** (v1.1) : voir §10. 141 tests verts ; porte de projection `npm run gate:stage` : 1 552 écrans géologie × 4 formats × 4 échelles sans défaut. |
+
+## 10. État d'avancement
+
+### WP0 + WP1 — réalisés (2026-10-21)
+**Mesure avant / après** (même porte `tools/stage/stage_gate.mjs`, mêmes écrans, Chromium) :
+
+| Mesure | Avant | Après |
+|---|---|---|
+| Figure d'un vote en % de la hauteur d'écran, 16:9 : ×1,3 · ×1,5 · ×1,75 | 19–49 % · 1–15 % · 1 % | 62 % · 57 % · 57 % (relevé intermédiaire ; la porte garantit ≥ 50 % / 45 % sur tous les écrans) |
+| idem 4:3 : ×1,1 · ×1,5 | 38 % · 8–15 % | 68 % · 51–58 % |
+| Défauts sur 582 écrans de géologie (2 formats × 3 échelles) | **855** (38 / 58 / 268 en 16:9 ; 43 / 175 / 273 en 4:3, par échelle ×1 / ×1,5 / ×2,5) | **0** |
+| Matrice complète géologie : 1 552 écrans (4 formats × 4 échelles ×0,8 → ×2,5) | — | **0 défaut** |
+| Autres leçons (1 074 écrans, 2 formats × 3 échelles) | 66 / 72 / 319 / 76 / 194 / 499 | 0 / 7 / 7 / 9 / 29 / 32 (pas de régression ; voir « Reste à faire ») |
+| Bonne réponse en « A » | 16 votes sur 20 | répartie sur A–D (15–35 % chacune sur 200 graines) |
+| Tests Node | 122 | **141** (vote-order 8, layout 11) |
+
+**Ce qui a changé**
+- **WP0.** `optionOrder` (permutation déterministe par scène et graine, `js/stage/tools.js`) ; décomptes, journal et bilan restent en ordre canonique. Revue des 20 votes : **aucun n'exige `fixed`** (l'option reste disponible, avec `fixedWhy` obligatoire).
+- **WP1.**
+  1. *Unité du chrome plafonnée* : `--uc = min(unité de salle, 1,45 × base, 0,95 % de la largeur)` ; toutes les règles `.st-l*` l'utilisent. En 16:9 jusqu'à ×1,45 : aucun changement.
+  2. *Budgets* : titre ≤ 11–12 % de la hauteur, légende ≤ 24 %, figure ≥ 46 % (garde CSS) ; polices ajustées par `fitClaim` / `fitCaption` (jamais sous 3,8 % / 4,2 % de la hauteur d'écran).
+  3. *Bandeau « instruction par les pairs »* retiré de l'écran projeté : il reste dans la vue présentateur ; **touche I** pour une indication courte (« 42 % · discutez 2 min, puis R ») sur l'écran, mémorisée.
+  4. *Correction d'un vote* : le nom du malentendu est toujours projeté ; son explication longue n'est conservée que si elle tient, sinon elle reste dans la vue présentateur et la bibliothèque.
+  5. *Options de vote* ajustées en largeur **et** hauteur (`K.fitBox`) ; bulles bornées à leur bande (`callout`, `top` / `maxH`) ; coupes (`SEC`) et schéma de pendage apparent réduits de la hauteur gagnée par le texte ; étiquettes d'altitude écartées (`K.declutter`) ; échelle graphique placée loin des trois points.
+  6. *Textes du chrome ≥ 3,8 %* (pastille, compteur, tally, paramètre) ; **minuteur** : chiffres ≥ 5 % avec barre de progression (l'ancien anneau portait des chiffres à 2,9 %).
+- **Porte de qualité** `npm run gate:stage` (nécessite Playwright et un serveur local : voir l'en-tête du script) : ordre des options cohérent touche ↔ lettre ↔ carte cochée, débordements, recouvrements, rognage, rail visible, légende non tronquée, figure ≥ 50 % / 45 %, tailles minimales.
+- Les tests ont été vérifiés par **mutation** (6 régressions volontaires : toutes détectées).
+
+**Choix à valider en classe** : plafond 1,45 (≈ 7 % de la hauteur pour une ligne de légende) ; seuils 11 % / 24 % / 46 % ; libellés courts de la touche I.
+
+### Reste à faire / observé hors périmètre
+- **Autres leçons** (hors géologie) : bulles recouvrant du texte à ×1,5 et en 4:3 (*coord*, *echelle*, *orient*, *mission*) et légende tronquée de *orient/2* — même code partagé, défauts préexistants, à traiter dans un lot dédié.
+- **F7 / F9** (figure de vote petite, espace vide dans *geocarte/14* et *coupe/7*) : WP3 et WP5.
+- **Revue visuelle** : le « 45° » de *coupe/7* touche le bord de son cadre en 4:3 (mineur).
