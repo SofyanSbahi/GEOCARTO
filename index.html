@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GéoCarto 2 – Cartographie topographique & profils</title>
+<meta name="description" content="Plateforme interactive pour apprendre la cartographie topographique et construire des profils topographiques : simulateur sur papier millimétré, 3D, exercices infinis.">
+<meta name="theme-color" content="#0f7b66">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛰️</text></svg>">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/stage.css">
+<script>try{var t=localStorage.getItem('gc2_theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.dataset.theme='dark'}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#view">Aller au contenu</a>
+<header class="top">
+  <a class="brand" href="#/" aria-label="GéoCarto – accueil"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M6 27c5-1 6-8 11-8s5 6 10 5 5-6 8-6M9 33c4-1 6-6 10-6s6 4 11 3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg><span>GéoCarto</span></a>
+  <a class="chip fire" id="chipStreak" href="#/moi" title="Série de jours">🔥 <span>0</span></a>
+  <a class="chip xp" id="chipXp" href="#/moi" title="Points d'expérience">⭐ <span>0</span></a>
+  <button class="icon" id="setBtn" aria-label="Réglages et accessibilité">⚙️</button>
+  <button class="icon" id="themeBtn" aria-label="Basculer le thème clair / sombre">🌙</button>
+</header>
+<nav class="rail" id="rail" aria-label="Navigation principale"></nav>
+<nav class="tabs" id="tabs" aria-label="Navigation mobile"></nav>
+<main id="view" tabindex="-1"><div class="loading">Chargement…</div></main>
+<button class="fab" id="fab" aria-label="Ouvrir l'assistant pédagogique" title="Assistant">🧭</button>
+<aside class="drawer" id="drawer" aria-label="Assistant pédagogique"></aside>
+<noscript><div style="padding:80px 20px">Cette plateforme nécessite JavaScript.</div></noscript>
+<script>
+/* Garde-fou de démarrage : n'affiche jamais « Chargement… » indéfiniment */
+(function(){
+ function esc(t){return String(t).replace(/[&<]/g,function(c){return c==='&'?'&amp;':'&lt;'})}
+ window.__gcFail=function(title,detail){var v=document.getElementById('view');if(!v||window.__gcBooted)return;
+  v.innerHTML='<div class="card"><h3>⚠️ '+esc(title)+'</h3><p>'+detail+'</p><p><button class="btn" onclick="location.reload()">Recharger</button></p><details><summary>Détails techniques</summary><pre style="white-space:pre-wrap;font-size:.8rem">'+esc(window.__gcLog||'(aucun)')+'</pre></details></div>'};
+ window.__gcLog='';window.addEventListener('error',function(e){window.__gcLog+=(e.message||'erreur de chargement')+' '+(e.filename||'')+':'+(e.lineno||'')+'\n';if(!window.__gcBooted)window.__gcFail('Erreur au démarrage','Le script principal a rencontré une erreur. Recharge la page (Ctrl+F5).')},true);
+ window.addEventListener('unhandledrejection',function(e){window.__gcLog+='Promesse rejetée : '+(e.reason&&e.reason.message||e.reason)+'\n'});
+ setTimeout(function(){if(!window.__gcBooted)window.__gcFail('Le démarrage est trop long','L\'application n\'a pas démarré après 6 secondes. '+(location.protocol==='file:'?'':'Vérifie que le dossier <code>dist/</code> est bien publié (<code>dist/app.js</code>) et que ta connexion fonctionne.'))},6000);
+})();
+</script>
+<script src="config.js"></script>
+<script src="dist/app.js" defer onerror="__gcFail('Fichier introuvable : dist/app.js','Le fichier <code>dist/app.js</code> n\'a pas été trouvé. Il faut déposer <b>tout</b> le contenu du dossier (y compris <code>dist/</code>) à la racine du dépôt. Sur GitHub Pages, les noms de fichiers sont sensibles à la casse.')"></script>
+</body>
+</html>
