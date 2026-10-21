@@ -4,9 +4,16 @@
   "private": true,
   "type": "module",
   "description": "GéoCarto — plateforme d'enseignement de la cartographie topographique (moteurs + expériences Learning / Stage)",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node --test \"tests/*.test.js\"",
     "golden": "node tools/make-golden.mjs",
-    "build": "sh build.sh"
+    "build": "sh build.sh",
+    "check:dist": "sh build.sh && git diff --exit-code -- dist/app.js"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }
