@@ -9,8 +9,8 @@ import { LESSONS } from '../js/stage/lessons/index.js';
 const votes = [];
 LESSONS.forEach(L => L.scenes.forEach(sc => { if (sc.kind === 'vote' && sc.vote) votes.push({ L, sc, key: `${L.id}.${sc.id}`, n: sc.vote.opts.length, ok: sc.vote.opts.findIndex(o => o.ok) }); }));
 
-test('le catalogue contient bien les 20 votes attendus, chacun avec une seule bonne réponse', () => {
-  assert.equal(votes.length, 20);
+test('le catalogue contient bien les 23 votes attendus, chacun avec une seule bonne réponse', () => {
+  assert.equal(votes.length, 23);
   for (const v of votes) assert.equal(v.sc.vote.opts.filter(o => o.ok).length, 1, v.key);
 });
 
@@ -63,5 +63,5 @@ test('sur une séance donnée, la bonne réponse n\'est plus presque toujours «
 
 test('un ordre fixe doit être justifié dans la scène (fixedWhy) ; aucun vote actuel n\'en a besoin', () => {
   for (const v of votes) if (v.sc.vote.fixed) assert.ok(typeof v.sc.vote.fixedWhy === 'string' && v.sc.vote.fixedWhy.length > 10, `${v.key} : fixed sans fixedWhy`);
-  assert.equal(votes.filter(v => v.sc.vote.fixed).length, 0, 'revue des 20 votes (2026-10-21) : aucun ne requiert d\'ordre fixe');
+  assert.equal(votes.filter(v => v.sc.vote.fixed).length, 0, 'revue des 23 votes (2026-10-22) : aucun ne requiert d\'ordre fixe');
 });

@@ -171,6 +171,7 @@ Taille : S petite · M moyenne · L grande. Ordre d'exécution : WP0 → WP1 →
 | 2026-10-21 | **WP0 + WP1 réalisés** (v1.1) : voir §10. 141 tests verts ; porte de projection `npm run gate:stage` : 1 552 écrans géologie × 4 formats × 4 échelles sans défaut. |
 | 2026-10-22 | **WP2 réalisé** (v1.2) : fil du raisonnement (brouillon à relire). 148 tests. |
 | 2026-10-22 | **WP3 réalisé** (v1.3) : options figurées. 162 tests. |
+| 2026-10-22 | **WP4 réalisé** (v1.4) : leçon préalable « Lire le relief » (brouillon à relire). 172 tests. |
 
 ## 10. État d'avancement
 
@@ -222,3 +223,10 @@ Taille : S petite · M moyenne · L grande. Ordre d'exécution : WP0 → WP1 →
 - **Contre-parties à connaître** : la carte de contexte du vote « Quelle forme en coupe ? » est ~45 % plus petite (la place est donnée aux quatre coupes) ; dans le vote de direction, les lettres A et D restent proches des étiquettes d'altitude (lisibles, un peu serrées).
 - **Hors lot** : largeur adaptative des cartes de texte (F7) pour les votes restés verbaux (*Cartes* v5 notamment) — non fait.
 - **Mesure** : 162 tests (14 nouveaux : `distractors`, dont l'orientation du monoclinal sur la coupe montrée) ; 7 régressions volontaires toutes détectées ; porte de projection : 0 défaut sur les formats testés.
+
+### WP4 — Leçon préalable « Lire le relief » : réalisée (2026-10-22) — *brouillon automatique, à relire*
+- **Leçon séparée** `prereq` (`js/stage/lessons/prereq.js`, décision D2), hors de la leçon « Cartes géologiques » ; carte dédiée dans l'index (`#/stage/prereq`) ; 3 votes ≈ 7 min + récapitulatif en 3 lignes ; `draft: true` (bandeau « brouillon automatique » dans la vue présentateur et sur la carte d'index).
+- **Trois réflexes testés** : (1) même courbe = même altitude (malentendus `t-pente`, `t-dist`, `t-veg`) ; (2) les chiffres disent où l'on descend (`c-sens`, `c-plat`, `c-nsp`) ; (3) le V pointe vers l'amont (`c-vaval`, `c-vnord`, `c-vnsp`). Figures calculées par le moteur de terrain, équidistance 100 m (3 courbes étiquetées lisibles au dernier rang). Tous les votes sont mélangés.
+- **Lien** : la note de la première scène de « Cartes géologiques » suggère le préalable aux groupes peu à l'aise avec les courbes.
+- **Mesure** : 172 tests (6 nouveaux : altitudes de P/Q, pointe du V, textes et malentendus) ; porte de projection prereq + geocarte + coupe : 0 défaut (2 formats × 3 échelles).
+- **Limite connue** : sur la colline de démonstration, P (500 m) et Q (300 m) ne sont distants que d'~10 unités : la flèche du vote 2 est courte (lisible, mais à agrandir si la relecture le demande). Seuils et formulations à relire par un enseignant de topographie.

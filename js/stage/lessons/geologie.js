@@ -219,7 +219,7 @@ export const FR = {
   'geocarte.hook.t0': 'La carte du trajet', 'geocarte.hook.t1': 'On zoome sur la zone', 'geocarte.hook.t2': 'Même lieu, autre carte',
   ...sc('hook', 'Même lieu, un autre regard',
     ['Voici la **carte topographique** de la mission : le camp A, le refuge B.', 'Zoomons sur **la zone du trajet**.', 'Même lieu : une **carte géologique**, plus des altitudes.'],
-    'Laisser trente secondes : que pensent-ils que les couleurs signifient ? Ne pas corriger : le vote suit.', 'À quoi servent ces couleurs, selon vous ?'),
+    'Laisser trente secondes : que pensent-ils que les couleurs signifient ? Ne pas corriger : le vote suit. Groupe peu à l’aise avec les courbes de niveau ? Commencer par la leçon préalable « Lire le relief » (7 min, #/stage/prereq).', 'À quoi servent ces couleurs, selon vous ?'),
   'geocarte.v1.top': 'Que représentent les couleurs ?',
   ...vt('v1', 'Que veulent dire ces couleurs ?', 'Que représentent les couleurs de la carte ?', ['Des formations rocheuses', 'L’altitude', 'La végétation', 'La profondeur'],
     'Chaque couleur = une formation rocheuse (roche + âge).', 'Les trois erreurs ont chacune une cause précise : les carte topographiques ont habitué l’œil à lire « couleur = hauteur ».', 'Qui a pensé à l’altitude ? Pourquoi ?'),

@@ -299,7 +299,7 @@ function mountPresenter(root, L) {
   document.body.classList.add('stage-pv');
   const S = { sc: 0, st: 0, steps: 1, votes: {} }; let live = false, t0 = Date.now(), ts = Date.now(), last = -1;
   const el = h('div', { class: 'pv' }); root.append(el);
-  el.innerHTML = `<h1>${esc(t(L.title))}</h1><p class="pv-status" id="pvStat"></p><div class="pv-grid"><section class="pv-main"><div class="pv-scene" id="pvScene"></div>
+  el.innerHTML = `<h1>${esc(t(L.title))}</h1>${L.draft ? `<p class="pv-warn">${esc(t('th.draft'))}</p>` : ''}<p class="pv-status" id="pvStat"></p><div class="pv-grid"><section class="pv-main"><div class="pv-scene" id="pvScene"></div>
    <div class="pv-card"><h3>${t('pres.note')}</h3><p id="pvNote"></p></div><div class="pv-card ask"><h3>${t('pres.question')}</h3><p id="pvAsk"></p></div><div class="pv-card" id="pvVotes"></div><div class="pv-card"><h3>${t('pres.next')}</h3><p id="pvNext"></p></div></section>
    <section class="pv-side"><div class="pv-card"><h3>${t('pres.timer')}</h3><p class="pv-time"><b id="pvT"></b> · ${t('pres.sceneTimer')} <b id="pvTs"></b></p></div>
    <div class="pv-card"><h3>${t('pres.controls')}</h3><div class="pv-btns">${[['prev', t('lk.prev')], ['next', t('lk.next')], ['pdn', '−'], ['pup', '+'], ['regen', t('lk.regen')], ['blank', t('lk.blank')]].map(([a, l]) => `<button class="pv-b" data-a="${a}">${esc(l)}</button>`).join('')}</div>
@@ -342,7 +342,8 @@ export function lessonIndex(root) {
     return href ? `<a class="st-ix-c" href="${href}">${inner}</a>` : `<div class="st-ix-c off">${inner}</div>`;
   }).join('');
   const pro = lessonById('mission'), proCard = pro ? `<a class="st-ix-c st-ix-pro" href="#/stage/mission"><span class="st-ix-n">0</span><span class="st-ix-b"><b>${esc(t('ix.pro'))}</b><small>${esc(t('ix.pro.d'))}</small></span><span class="st-ix-s st-ix-v2">${t('ix.v2')} · ${pro.scenes.reduce((a, s) => a + (s.min || 2), 0)} min</span></a>` : '';
-  root.innerHTML = `<h1>🎞️ ${t('ix.title')}</h1><p class="lead">${t('ix.lead')}</p><div class="st-ix">${proCard}${cards}</div>
+  const pre = lessonById('prereq'), preCard = pre ? `<a class="st-ix-c st-ix-pro" href="#/stage/prereq"><span class="st-ix-n">↺</span><span class="st-ix-b"><b>${esc(t('ix.pre'))}</b><small>${esc(t('ix.pre.d'))}</small></span><span class="st-ix-s st-ix-v2">${esc(t('th.draft'))} · ${pre.scenes.reduce((a, s) => a + (s.min || 2), 0)} min</span></a>` : '';
+  root.innerHTML = `<h1>🎞️ ${t('ix.title')}</h1><p class="lead">${t('ix.lead')}</p><div class="st-ix">${proCard}${preCard}${cards}</div>
    <div class="box tip"><b class="t">💡</b>${t('ix.tip')}</div>
    <p><a class="btn" href="#/stage/courbes/presenter">${t('ix.v1pres')}</a> <a class="btn" href="#/stage/fil">${t('th.title')}</a> <a class="btn" href="#/stage/lib">${t('lib.title')}</a> <a class="btn" href="#/stage/bilan">${t('bilan.title')}</a></p>`;
 }
