@@ -24,16 +24,16 @@ const lines = (s, F, a, sn, o = {}) => s.cps.map(c => S.dipLine(F, c, typeof a =
 const sky = '#ffffff';
 
 export const coupe = {
-  id: 'coupe', title: 'topic.11', seed: 4,
+  id: 'coupe', thread: true, title: 'topic.11', seed: 4,
   scenes: [
-    { id: 'hook', kind: 'hook', steps: 3, min: 1,
+    { id: 'hook', step: 'observe', kind: 'hook', steps: 3, min: 1,
       fig: (st, p, X) => {
         const { s } = ms(), F = S.frame(s, SEC);
         let o = S.groundFill(s, F) + (st >= 1 ? S.stripSvg(s, F) + S.contactDots(s, F) : path(S.terrainD(s, F), { stroke: C.ink, w: .9 })) + ab(F, s) + S.frameRect(F);
         o += st === 2 ? txt(F.X(s.L / 2), F.box.y + F.box.h * .72, '?', { size: 15, w: 800, fill: C.acc }) : '';
         return o + (st === 0 ? bot(X.t('coupe.hook.t0')) : st === 1 ? bot(X.t('coupe.hook.t1')) : bot(X.t('coupe.hook.t2'), { fill: C.acc }));
       } },
-    { id: 'v1', kind: 'vote', min: 2,
+    { id: 'v1', step: 'verify', kind: 'vote', min: 2,
       vote: { opts: [{ ok: true }, { mis: 'g-coupe-sens' }, { mis: 'g-coupe-vert' }, { mis: 'g-coupe-horiz' }],
         draw: (st, X) => {
           const { M, s } = ms(), box = { x: 4, y: 26, w: 82, h: 36 }, F = S.frame(s, box), ins = { x: 60, y: 2, w: 26, h: 17.9 }, a = mapPt(M, ins, M.A), b = mapPt(M, ins, M.B), c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
@@ -43,7 +43,7 @@ export const coupe = {
             K.txtL(4, 5.2, f.lines, { size: f.size, lh: f.size * 1.2, anchor: 'start', w: 800, fixed: true });
         } },
       q: 1 },
-    { id: 'horiz', kind: 'build', steps: 4, min: 2,
+    { id: 'horiz', step: 'verify', kind: 'build', steps: 4, min: 2,
       fig: (st, p, X) => {
         const T = tabGeo(), m = missionGeo().m, s = S.sectionOf(T, TAB_AB.A, TAB_AB.B), F = S.frame(s, SEC);
         let o = S.groundFill(s, F);
@@ -53,7 +53,7 @@ export const coupe = {
         if (st >= 1) o += T.levels.map(z => txt(F.box.x + 1, F.Z(z) - 1.6, String(z), { size: 4.2, w: 800, anchor: 'start', halo: true })).join('');
         return o + [bot(X.t('coupe.horiz.t0')), bot(X.t('coupe.horiz.t1')), bot(X.t('coupe.horiz.t2')), bot(X.t('coupe.horiz.t3'), { fill: C.pri })][st];
       } },
-    { id: 'mono', kind: 'build', steps: 6, min: 5,
+    { id: 'mono', step: 'verify', kind: 'build', steps: 6, min: 5,
       fig: (st, p, X) => {
         const { M, s } = ms(), F = S.frame(s, SEC), sn = sense(M, M.dipAz), a = M.apparent, c0 = s.cps[0];
         let o = S.groundFill(s, F);
@@ -65,7 +65,7 @@ export const coupe = {
         const e = st >= 5 ? Math.abs((S.exactAngle(s, s.cps[1].from, s.cps[1].to) || a) - a) : 0;
         return o + [bot(X.t('coupe.mono.t0')), bot(X.t('coupe.mono.t1', { d: M.dip, b: X.nf(Math.abs(((M.dipAz - M.az + 540) % 360) - 180), 0), a: X.nf(a, 0) })), bot(X.t('coupe.mono.t2', { a: X.nf(a, 0) }), { fill: C.acc }), bot(X.t('coupe.mono.t3')), bot(X.t('coupe.mono.t4')), bot(X.t('coupe.mono.t5', { e: X.nf(e, 1) }), { fill: C.pri })][st];
       } },
-    { id: 'v2', kind: 'vote', min: 3,
+    { id: 'v2', step: 'measure', kind: 'vote', min: 3,
       vote: { opts: [{ ok: true }, { mis: 'g-coupe-fort' }, { mis: 'g-coupe-fan' }, { mis: 'g-coupe-ok' }],
         draw: (st, X) => {
           const { M, s } = ms(), box = { x: 4, y: 20, w: 82, h: 40 }, F = S.frame(s, box), sn = sense(M, M.dipAz);
@@ -74,7 +74,7 @@ export const coupe = {
           return o + S.frameRect(F) + top(X.t('coupe.v2.top'));
         } },
       q: 1 },
-    { id: 'erreurs', kind: 'show', steps: 4, min: 2,
+    { id: 'erreurs', step: 'measure', kind: 'show', steps: 4, min: 2,
       fig: (st, p, X) => {
         const { M, s } = ms(), F = S.frame(s, SEC), sn = sense(M, M.dipAz), a = M.apparent;
         let o = S.groundFill(s, F) + S.clipped(s, F, S.regionsSvg(s, F, { op: st === 0 ? 1 : .3, lineOp: st === 0 ? 1 : .25 }), { ground: true });
@@ -82,7 +82,7 @@ export const coupe = {
         o += S.stripSvg(s, F) + S.contactDots(s, F, 1.1) + S.frameRect(F) + ab(F, s);
         return o + [bot(X.t('coupe.erreurs.t0'), { fill: C.pri }), bot(X.t('coupe.erreurs.t1'), { fill: C.red }), bot(X.t('coupe.erreurs.t2'), { fill: C.red }), bot(X.t('coupe.erreurs.t3'), { fill: C.red })][st];
       } },
-    { id: 'apparent', kind: 'show', steps: 4, min: 3,
+    { id: 'apparent', step: 'measure', kind: 'show', steps: 4, min: 3,
       fig: (st, p, X) => {
         const dip = 45, beta = 60, app = apparentDip(dip, 90, 90 - beta), R = Math.PI / 180;
         let o = rect(5, 4, 66, 46, { fill: C.soft, stroke: C.ink, w: .5, rx: 2 }) + line(38, 6, 38, 48, { c: C.acc, w: 1.3 }) + arrow(38, 27, 54, 27, { c: C.ink, w: 1.3, head: 3.4 }) + txt(58.2, 27, `${dip}°`, { size: 4.4, w: 800, anchor: 'start' });
@@ -93,14 +93,14 @@ export const coupe = {
         const kf = SEC.h / 50;
         return K.g(o, { transform: `translate(80 0) scale(${kf.toFixed(3)}) translate(-80 0)` }) + [bot(X.t('coupe.apparent.t0')), bot(X.t('coupe.apparent.t1')), bot(X.t('coupe.apparent.t2')), bot(X.t('coupe.apparent.t3', { b: beta }), { fill: C.acc })][st];
       } },
-    { id: 'ev', kind: 'show', steps: 3, min: 2, param: { values: [1, 2, 3], start: 0, label: (v, i, X) => X.t('coupe.ev.p', { n: v }) },
+    { id: 'ev', step: 'measure', kind: 'show', steps: 3, min: 2, param: { values: [1, 2, 3], start: 0, label: (v, i, X) => X.t('coupe.ev.p', { n: v }) },
       fig: (st, ev, X) => {
         const { M, s } = ms(), F = S.frame(s, SEC, ev), sn = sense(M, M.dipAz), a = M.apparent, c0 = s.cps[1];
         let o = S.groundFill(s, F) + S.clipped(s, F, S.regionsSvg(s, F, {}) + lines(s, F, a, sn, { c: C.ink, w: 1 }), { ground: true }) + S.stripSvg(s, F) + S.frameRect(F);
         if (st >= 1) o += tag(F.X(c0.s) + (sn > 0 ? 20 : -20), Math.min(F.Z(c0.z) + 11, 44), `${X.nf(S.drawnAngle(a, ev), 0)}°`, { size: 5, fill: ev === 1 ? C.green : C.red });
         return o + [bot(X.t('coupe.ev.t0', { n: ev })), bot(X.t(ev === 1 ? 'coupe.ev.t1b' : 'coupe.ev.t1', { m: X.nf(S.drawnAngle(a, ev), 0), a: X.nf(a, 0) }), { fill: ev === 1 ? C.pri : C.red }), bot(X.t('coupe.ev.t2'), { fill: C.pri })][st];
       } },
-    { id: 'v3', kind: 'vote', min: 2,
+    { id: 'v3', step: 'suppose', kind: 'vote', min: 2,
       vote: { opts: [{ ok: true }, { mis: 'g-coupe-pli-inv' }, { mis: 'g-coupe-pli-mono' }, { mis: 'g-coupe-pli-tab' }],
         draw: (st, X) => {
           const G = galerie('anticlinal'), box = { x: 2, y: 13, w: 66, h: 45.5 }, d = G.geo.dem, a = mapPt(G, box, midLine(G).A), b = mapPt(G, box, midLine(G).B);
@@ -108,12 +108,12 @@ export const coupe = {
             legendSvg(G, 72, 13, 13, 45) + txt(78.5, 10.4, X.t('coupe.v3.young'), { size: 3.6, w: 700, fill: C.mute }) + txt(78.5, 61.6, X.t('coupe.v3.old'), { size: 3.6, w: 700, fill: C.mute }) + top(X.t('coupe.v3.top'));
         } },
       q: 1 },
-    { id: 'struct', kind: 'show', steps: 5, min: 4,
+    { id: 'struct', step: 'suppose', kind: 'show', steps: 5, min: 4,
       fig: (st, p, X) => {
         const k = ['tabulaire', 'monoclinal', 'anticlinal', 'synclinal', 'discordance'][st], G = galerie(k), l = midLine(G), s = S.sectionOf(G, l.A, l.B, 260, 140, .3), F = S.frame(s, SEC);
         return S.groundFill(s, F) + S.clipped(s, F, S.regionsSvg(s, F, { labels: true }), { ground: true }) + S.stripSvg(s, F, { w: 1.6 }) + S.frameRect(F) + ab(F, s) + bot(X.t('coupe.sig.' + k), { fill: k === 'anticlinal' || k === 'synclinal' ? C.acc : C.ink });
       } },
-    { id: 'pr', kind: 'practice', min: 5, practice: { seconds: 300, draw: true },
+    { id: 'pr', step: 'verify', kind: 'practice', min: 5, practice: { seconds: 300, draw: true },
       fig: (st, p, X) => {
         const E = exoGeo(), s = S.sectionOf(E, EXO_AB.A, EXO_AB.B), F = S.frame(s, SEC), dip = 30, dipAz = 100, a = apparentDip(dip, dipAz, s.az), sn = sense(s, dipAz);
         let o = S.groundFill(s, F);
@@ -121,7 +121,7 @@ export const coupe = {
         o += S.stripSvg(s, F) + S.contactDots(s, F, 1.1) + S.frameRect(F) + ab(F, s);
         return o + (st < 2 ? bot(X.t('coupe.pr.t0', { d: dip, dir: toward(dipAz), az: X.nf(s.az, 0) })) : bot(X.t('coupe.pr.t2', { a: X.nf(a, 0), b: X.nf(Math.abs(((dipAz - s.az + 540) % 360) - 180), 0) }), { fill: C.pri }));
       } },
-    { id: 'recap', kind: 'recap', steps: 4, min: 1, fig: (st, p, X) => recapFig('coupe', st, X) }
+    { id: 'recap', step: 'all', kind: 'recap', steps: 4, min: 1, fig: (st, p, X) => recapFig('coupe', st, X) }
   ]
 };
 

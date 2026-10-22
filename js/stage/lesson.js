@@ -11,6 +11,7 @@ import { TOPICS, lessonById } from './lessons/index.js';
 import { h } from '../core/util.js';
 import { loadPrefs, savePrefs, logVote, unitPx, fmtClock, safeHtml, words, passiveRun, mazur, optionOrder, invertOrder, chromeUnit } from './tools.js';
 import { pickExo } from '../engine/pedagogy/index.js';
+import { threadHtml, threadNote } from './thread.js';
 
 const ICON = {
   prev: '<path d="M15 5l-7 7 7 7"/>', next: '<path d="M9 5l7 7-7 7"/>', up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
@@ -50,6 +51,19 @@ function fitClaim(el, uc) {
   const H = innerHeight, budget = .11 * H, start = 4.6 * uc, floor = Math.min(start, .038 * H), step = Math.max(.4, start * .04);
   for (let px = start; px >= floor - .01; px -= step) { el.style.fontSize = px + 'px'; if (el.scrollHeight <= budget) return; }
   el.style.fontSize = floor + 'px';
+}
+/* Fil du raisonnement : une seule rangée. On essaie d'abord les six étapes avec leur nom (police 4,6 u de chrome, réduite jusqu'à 3,8 % de la hauteur d'écran ; la rangée ne dépasse jamais 9 % de la hauteur) ;
+   si elles ne tiennent pas (4:3, 16:10, amphi), les étapes non courantes ne gardent que leur numéro et l'étape courante garde son nom. */
+function fitThread(nav) {
+  const ol = nav.firstElementChild; if (!ol) return;
+  const H = innerHeight, uc = parseFloat(nav.parentElement.style.getPropertyValue('--uc')) || H * .01, start = 4.6 * uc, floor = Math.min(start, .038 * H), step = Math.max(.4, start * .04);
+  const fits = () => ol.scrollWidth <= nav.clientWidth + 1 && nav.getBoundingClientRect().height <= .09 * H;
+  nav.classList.remove('compact');
+  for (const compact of [false, true]) {
+    nav.classList.toggle('compact', compact);
+    for (let px = start; px >= floor - .01; px -= step) { nav.style.setProperty('--thf', px + 'px'); if (fits()) return; }
+  }
+  nav.style.setProperty('--thf', floor + 'px');
 }
 function fitCaption(capEl, variants, uc) {
   const H = innerHeight, budget = .24 * H, start = 4.9 * uc, floor = Math.min(start, .042 * H), step = Math.max(.4, start * .03);
@@ -106,10 +120,11 @@ export function mountLesson(root, id, arg) {
   const prefs = loadPrefs(); setLang(prefs.lang || 'fr');
   const S = { pre: {}, sc: Math.max(0, Math.min(L.scenes.length - 1, (+arg || 1) - 1)), st: 0, pi: 0, rs: prefs.rs || 1, theme: prefs.theme || 'light', seed: prefs.seed || L.seed || 12, votes: {}, hint: !!prefs.hint, blank: false, help: false, fwd: true, tEnd: 0, tTot: 0 };
   document.body.classList.add('stage-on');
-  const el = h('div', { class: 'stg st-l', 'data-theme': S.theme });
+  const el = h('div', { class: 'stg st-l' + (L.thread ? ' has-thread' : ''), 'data-theme': S.theme });
   el.innerHTML = `<header class="st-l-top"><span class="st-l-kind" id="lKind"></span><h1 class="st-l-claim" id="lClaim"></h1><span class="st-l-n" id="lN"></span></header>
    <main class="st-l-fig" id="lFig"><svg id="lSvg" viewBox="0 0 ${K.W} ${K.H}" preserveAspectRatio="xMidYMid meet" role="img"></svg><div class="st-l-ov" id="lOv"></div></main>
    <footer class="st-l-cap"><p class="st-l-text" id="lCap" aria-live="polite"></p><div class="st-l-side" id="lSide"></div></footer>
+   <nav class="st-l-thread" id="lThread" aria-label="${esc(t('th.aria'))}" data-draft="${L.thread ? 'true' : ''}"></nav>
    <nav class="st-l-rail" id="lRail" aria-label="${esc(t('lk.rail'))}"></nav>
    <div class="st-l-tools" id="lTools"></div><div class="st-l-blank" id="lBlank"></div><div class="st-l-help" id="lHelp" role="dialog"></div>
    <div class="st-l-test" id="lTest" role="dialog"><h2>${t('lk.test.title')}</h2><p class="st-l-tp">${t('lk.test.how')}</p>
@@ -186,6 +201,7 @@ export function mountLesson(root, id, arg) {
     const kinds = L.scenes.map(s => s.kind), run = passiveRun(kinds, S.sc, K.ACTIVE);
     el.querySelectorAll('.st-l-dot').forEach((d, i) => { d.classList.toggle('on', i === S.sc); d.classList.toggle('dn', i < S.sc); });
     $('#lRail').classList.toggle('warn', run >= 4);
+    if (L.thread) { const th = $('#lThread'); th.innerHTML = threadHtml(L, sc); th.classList.toggle('warn', run >= 4); fitThread(th); }
     /* timer */
     clearInterval(timerI);
     if (sc.practice) {
@@ -270,7 +286,8 @@ function mountPresenter(root, L) {
   el.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) send(b.dataset.a, b.dataset.v != null ? +b.dataset.v : undefined); });
   const draw = () => {
     const sc = L.scenes[S.sc]; if (S.sc !== last) { ts = Date.now(); last = S.sc; }
-    $('#pvScene').innerHTML = `<span class="pv-no">${S.sc + 1}</span><div><h2>${esc(t(key(L, sc, 'claim')))}</h2><p>${t('kind.' + sc.kind)} · ${t('lk.step', { a: S.st + 1, b: S.steps })}</p></div>`;
+    const tn = threadNote(L, sc);
+    $('#pvScene').innerHTML = `<span class="pv-no">${S.sc + 1}</span><div><h2>${esc(t(key(L, sc, 'claim')))}</h2><p>${t('kind.' + sc.kind)} · ${t('lk.step', { a: S.st + 1, b: S.steps })}</p>${tn ? `<p class="pv-th">${esc(tn)}</p>` : ''}</div>`;
     $('#pvNote').textContent = has(key(L, sc, 'note')) ? t(key(L, sc, 'note')) : '—'; $('#pvAsk').textContent = has(key(L, sc, 'ask')) ? t(key(L, sc, 'ask')) : '—';
     const nx = L.scenes[S.sc + 1]; $('#pvNext').textContent = nx ? t(key(L, nx, 'claim')) : '—';
     el.querySelectorAll('#pvList .pv-b').forEach((b, i) => b.classList.toggle('on', i === S.sc));
@@ -302,5 +319,5 @@ export function lessonIndex(root) {
   const pro = lessonById('mission'), proCard = pro ? `<a class="st-ix-c st-ix-pro" href="#/stage/mission"><span class="st-ix-n">0</span><span class="st-ix-b"><b>${esc(t('ix.pro'))}</b><small>${esc(t('ix.pro.d'))}</small></span><span class="st-ix-s st-ix-v2">${t('ix.v2')} · ${pro.scenes.reduce((a, s) => a + (s.min || 2), 0)} min</span></a>` : '';
   root.innerHTML = `<h1>🎞️ ${t('ix.title')}</h1><p class="lead">${t('ix.lead')}</p><div class="st-ix">${proCard}${cards}</div>
    <div class="box tip"><b class="t">💡</b>${t('ix.tip')}</div>
-   <p><a class="btn" href="#/stage/courbes/presenter">${t('ix.v1pres')}</a> <a class="btn" href="#/stage/lib">${t('lib.title')}</a> <a class="btn" href="#/stage/bilan">${t('bilan.title')}</a></p>`;
+   <p><a class="btn" href="#/stage/courbes/presenter">${t('ix.v1pres')}</a> <a class="btn" href="#/stage/fil">${t('th.title')}</a> <a class="btn" href="#/stage/lib">${t('lib.title')}</a> <a class="btn" href="#/stage/bilan">${t('bilan.title')}</a></p>`;
 }

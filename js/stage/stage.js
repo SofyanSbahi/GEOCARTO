@@ -317,6 +317,7 @@ export default async function (root, { a, b }) {
   const { lessonById } = await import('./lessons/index.js');
   const lesson = await import('./lesson.js');
   if (!a) return lesson.lessonIndex(root);
+  if (a === 'fil') { const pg = await import('./pages.js'); return pg.mountFil(root); }
   if (a === 'lib' || a === 'bilan') { const pg = await import('./pages.js'); return a === 'lib' ? pg.mountLib(root) : pg.mountBilan(root); }
   if (lessonById(a)) return lesson.mountLesson(root, a, b);
   const deck = DECKS[a]; if (!deck) return lesson.lessonIndex(root);

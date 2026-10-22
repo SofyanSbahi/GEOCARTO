@@ -1,6 +1,6 @@
 # GéoCarto v3.1 — « Raisonner, pas réciter » · plan de mise en œuvre
 
-> Statut : **WP0 et WP1 réalisés** (2026-10-21) ; WP2 à WP7 à venir · version 1.1
+> Statut : **WP0, WP1 et WP2 réalisés** (2026-10-21 / 22) ; WP3 à WP7 à venir · version 1.2
 > Public visé : étudiants de première année de géologie, sans acquis en topographie, cartographie ni raisonnement géologique.
 > Ce document évolue avec les versions : mettre à jour la section 9 (journal) à chaque jalon.
 
@@ -97,7 +97,7 @@ Taille : S petite · M moyenne · L grande. Ordre d'exécution : WP0 → WP1 →
 - **Correspondance scène → jalon (version 0, à affiner).** *Cartes* : hook, v1, légende → Observer ; contact, horiz, v2 → Situer ; dip, v3, pr → Mesurer ; âge, v4, recoup → Dater ; struct, v5 → Supposer ; bilan → les six. *Coupes* : hook → Observer ; v1, horiz, mono → Vérifier ; v2 (erreurs), apparent, ev → Mesurer ; struct, v3 → Supposer ; pr → Vérifier ; bilan → les six.
 - **Statut.** Champ `draft: true` sur chaque jalon et chaque texte ; mention **« brouillon automatique — à relire par un géologue »** visible dans la vue présentateur et la fiche imprimable (clé i18n `lk.draft`). Retirer le drapeau = relecture faite (nom du relecteur et date dans ce document, §9).
 - **Fichiers.** `js/stage/lesson.js`, `js/stage/lessons/geologie.js` et `coupe.js` (champ `step`), fichiers de textes des leçons, `js/stage/pages.js` (fiche), `js/main.js` (route, à vérifier), `css/stage.css`.
-- **Tests.** `tests/thread.test.js` : chaque scène de géologie a un `step` valide ou un `null` justifié ; ordre non décroissant dans une leçon ; clés i18n présentes ; libellés ≤ 10 caractères ; le bandeau n'émet aucune classe `fp` ; tout jalon `draft` affiche la mention.
+- **Tests.** `tests/thread.test.js` : chaque scène de géologie a un `step` valide (la correspondance v0 est figée : la changer doit être volontaire) ; le bilan montre les six étapes ; clés i18n présentes ; libellés ≤ 10 caractères ; le bandeau n'émet aucune classe `fp` ; tout jalon `draft` affiche la mention.
 
 ### WP3 — Options figurées (A) · L
 - **But.** Chaque mauvaise réponse est **la figure que produirait un étudiant ayant ce malentendu**, générée par le moteur : le vote *diagnostique* et la salle *voit* pourquoi c'est faux.
@@ -120,7 +120,7 @@ Taille : S petite · M moyenne · L grande. Ordre d'exécution : WP0 → WP1 →
 - **Tests.** `tests/palette.test.js` : contraste ≥ 3:1 des éléments clés sur chaque formation (ou liseré présent), ΔE ≥ 10 des paires voisines (ou repère non coloré) sous délavage et daltonisme (les formules du calcul de l'audit).
 
 ### WP6 — Couche enseignant minimale · S — *brouillon automatique, à relire*
-- **Constat.** La vue présentateur lit `<leçon>.<scène>.note` et `.ask`, mais **les scènes de géologie n'en ont aucune** (0 note, 0 question) : la vue affiche « — ».
+- **Constat (corrigé le 2026-10-22).** La vue présentateur lit `<leçon>.<scène>.note` et `.ask`. Ma première lecture (« aucune note ») était **fausse** : les 27 scènes de géologie ont déjà chacune une note et une question (15 + 12, vérifié par `has()` sur les clés). Le lot devient donc : **relire** ces notes, y **ajouter** le conseil par bande de Mazur et le rappel de l'étape du fil, et les marquer « brouillon » tant qu'elles ne sont pas relues.
 - **Contenu.** Pour les scènes modifiées ou créées en v3.1 : note, question à poser, conseil par bande de Mazur (< 30 %, 30–70 %, > 70 %). Chaque texte porte `draft: true`.
 - **Tests.** Chaque scène de vote touchée a `note` et `ask` ; la mention « brouillon » s'affiche.
 
@@ -203,3 +203,11 @@ Taille : S petite · M moyenne · L grande. Ordre d'exécution : WP0 → WP1 →
 - **Autres leçons** (hors géologie) : bulles recouvrant du texte à ×1,5 et en 4:3 (*coord*, *echelle*, *orient*, *mission*) et légende tronquée de *orient/2* — même code partagé, défauts préexistants, à traiter dans un lot dédié.
 - **F7 / F9** (figure de vote petite, espace vide dans *geocarte/14* et *coupe/7*) : WP3 et WP5.
 - **Revue visuelle** : le « 45° » de *coupe/7* touche le bord de son cadre en 4:3 (mineur).
+
+### WP2 — Fil du raisonnement : réalisé (2026-10-22) — *brouillon automatique, à relire*
+- **Bandeau** `Observer · Situer · Mesurer · Dater · Supposer · Vérifier` sur les 27 scènes de géologie (`js/stage/thread.js`, champ `step` de chaque scène). Étape courante pleine, numérotée, `aria-current` ; **bilan : les six pleines**. Il **remplace la rangée du rail** (même hauteur : la figure ne perd rien) ; le rail réapparaît, opaque, au mouvement du pointeur.
+- **Lisibilité** : police de 4,6 u de chrome réduite jusqu'à 3,8 % de la hauteur d'écran, rangée ≤ 9 % de la hauteur. **16:9 : les six noms sont toujours visibles** (à tous les réglages de salle testés). **4:3 / 5:4 / 16:10 étroit** : les six noms ne tiennent pas à une taille lisible ; seule l'étape **courante** garde son nom (les autres : leur numéro).
+- **Vue présentateur** : ligne « Fil : étape 3 — Mesurer : Quelle direction, quel pendage ? — brouillon automatique… ». **Fiche A5 imprimable** `#/stage/fil` (lien depuis l'index) avec la question et un indice par étape.
+- **Statut de brouillon** : `THREAD_DRAFT = true` ; mention « brouillon automatique — à relire par un géologue » dans le présentateur et sur la fiche. Passer à `false` seulement après relecture (nom et date à noter ici).
+- **Correspondance v0** (figée par `tests/thread.test.js`) : *Cartes* — hook, v1, légende → Observer ; contact, horiz, v2 → Situer ; dip, v3, pr → Mesurer ; âge, v4, recoup → Dater ; struct, v5 → Supposer ; bilan → les six. *Coupes* — hook → Observer ; v1, horiz, mono, pr → Vérifier ; v2, erreurs, apparent, ev → Mesurer ; v3, struct → Supposer ; bilan → les six. **Points à trancher par le relecteur** : v2/erreurs (diagnostic d'une coupe fausse) en « Mesurer » ou « Vérifier » ? ; la construction d'une coupe avant l'intuition du pendage apparent (cf. P1).
+- **Mesure** (`npm run gate:stage`) : 873 écrans géologie × 3 formats × 3 échelles : 0 défaut ; 148 tests (7 nouveaux, vérifiés par 4 régressions volontaires).

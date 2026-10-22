@@ -7,6 +7,7 @@ import './lessons/fr.js';
 import { t, has, setLang } from './i18n.js';
 import { LESSONS } from './lessons/index.js';
 import { loadPrefs, readLog, clearLog } from './tools.js';
+import { STEPS, THREAD_DRAFT } from './thread.js';
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const LET = 'ABCD', sum = a => (a || []).reduce((x, y) => x + y, 0);
@@ -69,4 +70,14 @@ export function mountBilan(root) {
   j.onclick = () => dl('geocarto-bilan.json', 'application/json', JSON.stringify({ exporte: new Date().toISOString(), journal: log, synthese: rows.map(({ f, ...r }) => r) }, null, 1));
   root.querySelector('#bCsv').onclick = () => dl('geocarto-bilan.csv', 'text/csv', ['lecon;scene;votes;bonnes_reponses_pct;gain_revote_pts;A;B;C;D'].concat(rows.map(r => [r.lesson, r.scene, r.tot, r.pct, r.gain == null ? '' : r.gain, ...[0, 1, 2, 3].map(i => r.opts[i] || 0)].join(';'))).join('\n'));
   root.querySelector('#bClr').onclick = () => { if (confirm(t('bilan.confirm'))) { clearLog(); mountBilan(root); } };
+}
+
+/* Fiche imprimable « Comment pense un géologue » : les six questions du fil du raisonnement (A5 paysage à l'impression) */
+export function mountFil(root) {
+  setLang(loadPrefs().lang || 'fr');
+  root.innerHTML = `<div class="st-fil"><h1>🧭 ${esc(t('th.title'))}</h1><p class="lead">${esc(t('th.lead'))}</p>
+  ${THREAD_DRAFT ? `<p class="st-fil-draft">${esc(t('th.draft'))}</p>` : ''}
+  <ol class="st-fil-g">${STEPS.map((id, i) => `<li class="st-fil-c"><span class="st-fil-n">${i + 1}</span><div><h2>${esc(t('th.' + id))}</h2><p class="st-fil-q">${esc(t('th.' + id + '.q'))}</p><p class="st-fil-h">${esc(t('th.card.hint'))} : ${esc(t('th.' + id + '.h'))}</p></div></li>`).join('')}</ol>
+  <p class="st-fil-btns"><a class="btn" href="#/stage">← ${esc(t('ix.title'))}</a> <button class="btn" id="filPrint">${esc(t('th.card.print'))}</button></p></div>`;
+  const b = root.querySelector('#filPrint'); if (b) b.onclick = () => window.print();
 }
