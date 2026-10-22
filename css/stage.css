@@ -208,3 +208,5 @@ a.st-ix-c:hover{border-color:var(--pri)}.st-ix-c.off{opacity:.6}
 .st-tab{border-collapse:collapse;width:100%}.st-tab th,.st-tab td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:.9rem}.st-tab td.n{text-align:right;white-space:nowrap}
 .st-bar{display:inline-block;width:90px;height:10px;background:#e6e6e6;border-radius:5px;vertical-align:middle;overflow:hidden}.st-bar i{display:block;height:100%}.st-bar .lo{background:#c0392b}.st-bar .mid{background:#e0a100}.st-bar .hi{background:#1e8449}
 .st-note{color:var(--mute);font-size:.85rem}
+
+.pv-dr{font-weight:600;color:#a15c00}.pv-dom{margin:.5em 0;padding:.5em .7em;border-left:4px solid #a15c00;background:#fff6e5}

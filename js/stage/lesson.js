@@ -300,7 +300,7 @@ function mountPresenter(root, L) {
   const S = { sc: 0, st: 0, steps: 1, votes: {} }; let live = false, t0 = Date.now(), ts = Date.now(), last = -1;
   const el = h('div', { class: 'pv' }); root.append(el);
   el.innerHTML = `<h1>${esc(t(L.title))}</h1>${L.draft ? `<p class="pv-warn">${esc(t('th.draft'))}</p>` : ''}<p class="pv-status" id="pvStat"></p><div class="pv-grid"><section class="pv-main"><div class="pv-scene" id="pvScene"></div>
-   <div class="pv-card"><h3>${t('pres.note')}</h3><p id="pvNote"></p></div><div class="pv-card ask"><h3>${t('pres.question')}</h3><p id="pvAsk"></p></div><div class="pv-card" id="pvVotes"></div><div class="pv-card"><h3>${t('pres.next')}</h3><p id="pvNext"></p></div></section>
+   <div class="pv-card"><h3>${t('pres.note')}${L.thread || L.draft ? ' <small class="pv-dr">· ' + esc(t('th.draft')) + '</small>' : ''}</h3><p id="pvNote"></p></div><div class="pv-card ask"><h3>${t('pres.question')}</h3><p id="pvAsk"></p></div><div class="pv-card" id="pvVotes"></div><div class="pv-card"><h3>${t('pres.next')}</h3><p id="pvNext"></p></div></section>
    <section class="pv-side"><div class="pv-card"><h3>${t('pres.timer')}</h3><p class="pv-time"><b id="pvT"></b> · ${t('pres.sceneTimer')} <b id="pvTs"></b></p></div>
    <div class="pv-card"><h3>${t('pres.controls')}</h3><div class="pv-btns">${[['prev', t('lk.prev')], ['next', t('lk.next')], ['pdn', '−'], ['pup', '+'], ['regen', t('lk.regen')], ['blank', t('lk.blank')]].map(([a, l]) => `<button class="pv-b" data-a="${a}">${esc(l)}</button>`).join('')}</div>
    <div class="pv-btns">${[0, 1, 2, 3].map(i => `<button class="pv-b" data-a="vote" data-v="${i}">+ ${LET[i]}</button>`).join('')}<button class="pv-b" data-a="revote">${t('pi.revote')}</button></div><div id="pvPi"></div></div>
@@ -309,6 +309,8 @@ function mountPresenter(root, L) {
   let ch = null; try { ch = new BroadcastChannel('gc-stage-L-' + L.id); } catch (e) { }
   const send = (a, v) => ch && ch.postMessage({ t: 'cmd', a, v });
   el.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) send(b.dataset.a, b.dataset.v != null ? +b.dataset.v : undefined); });
+  /* malentendu dominant : la mauvaise réponse la plus choisie, avec sa correction (guide de remédiation, pas de texte propre à la scène) */
+  const domMis = (sc, v) => { const tot = v || [], ok = sc.vote.opts.findIndex(o => o.ok); let b = -1; sc.vote.opts.forEach((o, i) => { if (i !== ok && o.mis && (tot[i] || 0) > 0 && (b < 0 || tot[i] > tot[b])) b = i; }); if (b < 0) return ''; const id = sc.vote.opts[b].mis; return has('mis.' + id) ? `<div class="pv-dom"><b>${esc(t('pres.dom'))}</b> : ${esc(t('mis.' + id))}${has('mis.' + id + '.why') ? ' — ' + esc(t('mis.' + id + '.why')) : ''}</div>` : ''; };
   const draw = () => {
     const sc = L.scenes[S.sc]; if (S.sc !== last) { ts = Date.now(); last = S.sc; }
     const tn = threadNote(L, sc);
@@ -317,7 +319,7 @@ function mountPresenter(root, L) {
     const nx = L.scenes[S.sc + 1]; $('#pvNext').textContent = nx ? t(key(L, nx, 'claim')) : '—';
     el.querySelectorAll('#pvList .pv-b').forEach((b, i) => b.classList.toggle('on', i === S.sc));
     const v = S.votes[sc.id]; $('#pvVotes').style.display = sc.kind === 'vote' ? '' : 'none';
-    if (sc.kind === 'vote') { const sum = (v || []).reduce((a, b) => a + b, 0) || 1; $('#pvVotes').innerHTML = `<h3>${t('lk.votes', { n: (v || []).reduce((a, b) => a + b, 0) })}</h3>` + ((m) => m ? `<div class="st-l-pi pi-${m.band}"><b>${m.pct} %</b> ${t('pi.' + m.band)}</div>` : '')(mazur(v, sc.vote.opts.findIndex(o => o.ok))) + optionOrder(sc.vote.opts.length, L.id + '.' + sc.id, S.seed, !!sc.vote.fixed).map((c, d) => `<div class="pv-bar"><b>${LET[d]}</b><i style="width:${Math.round(100 * ((v || [])[c] || 0) / sum)}%"></i><span>${(v || [])[c] || 0}</span></div>`).join(''); }
+    if (sc.kind === 'vote') { const sum = (v || []).reduce((a, b) => a + b, 0) || 1; $('#pvVotes').innerHTML = `<h3>${t('lk.votes', { n: (v || []).reduce((a, b) => a + b, 0) })}</h3>` + ((m) => m ? `<div class="st-l-pi pi-${m.band}"><b>${m.pct} %</b> ${t('pi.' + m.band)}</div>` : '')(mazur(v, sc.vote.opts.findIndex(o => o.ok))) + domMis(sc, v) + optionOrder(sc.vote.opts.length, L.id + '.' + sc.id, S.seed, !!sc.vote.fixed).map((c, d) => `<div class="pv-bar"><b>${LET[d]}</b><i style="width:${Math.round(100 * ((v || [])[c] || 0) / sum)}%"></i><span>${(v || [])[c] || 0}</span></div>`).join(''); }
   };
   const stat = () => { $('#pvStat').textContent = live ? t('pres.connected') : t('pres.waiting'); $('#pvStat').className = 'pv-status ' + (live ? 'ok' : ''); };
   if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'state') { Object.assign(S, m.S); live = true; stat(); draw(); } };
