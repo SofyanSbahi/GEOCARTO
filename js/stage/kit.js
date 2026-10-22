@@ -56,6 +56,8 @@ export const at = (st, k, inner, o = {}) => {
 export const spotlight = (st, k, cx, cy, r, o = {}) => st < k || (o.until != null && st > o.until) ? '' :
   el('path', { class: 'st-spot' + (st === k && K.fwd ? ' enter' : ''), d: `M0 0H${W}V${H}H0Z M${r2(cx + r)} ${r2(cy)}A${r2(r)} ${r2(r)} 0 1 0 ${r2(cx - r)} ${r2(cy)}A${r2(r)} ${r2(r)} 0 1 0 ${r2(cx + r)} ${r2(cy)}Z`, 'fill-rule': 'evenodd', fill: '#0c1116', opacity: o.op || .55 });
 /* détail secondaire : supprimé en amphithéâtre (le texte restant est plus grand, pas plus nombreux) */
+/* retire la classe « point focal » d'un fragment : un élément de contexte qui ne doit pas rivaliser avec les options d'un vote */
+export const quiet = inner => inner.replace(/\bclass="([^"]*)\bfp\b([^"]*)"/g, 'class="$1$2"');
 export const lo = inner => K.amphi || K.narrow ? '' : inner;
 /* pastille numérotée / lettrée */
 export const badge = (x, y, s, o = {}) => circ(x, y, o.r || 2.6, { fill: o.fill || C.pri, cls: o.quiet ? null : 'fp' }) + txt(x, y + .1, s, { size: o.size || 3.6, fill: '#fff', halo: false, w: 800 });

@@ -71,6 +71,21 @@ export function dipLine(F, c, a, sens = 1, o = {}) {
   const y1 = Math.min(yEnd, B.y + B.h), x1 = yEnd > B.y + B.h ? x0 + sens * (B.y + B.h - y0) / t : xEnd;
   return line(x0, y0, x1, y1, { c: o.c || C.ink, w: o.w || 1, dash: o.dash });
 }
+/* Petites coupes pour les OPTIONS d'un vote « galerie » : aucune étiquette (la lettre est ajoutée par le vote), traits ≥ 1,6 u, contraste maximal.
+   contactSection : la trace, ses points de contact, et les contacts prolongés selon la variante { angle, sense } (engine/geology/distractors.js) ;
+   structureSection : la coupe exacte colorée d'une structure. */
+/* profondeur des petites coupes d'options : à l'échelle vraie (angles conservés) une coupe est large et peu profonde ; sans profondeur les contacts n'ont pas la place
+   de se lire dans une case de 50 × 22 u (audit visuel du 22/10 : bandes plates en haut de la case). */
+export const MINI_DEPTH = .35;
+export const miniSectionOf = (ctx, A, B) => sectionOf(ctx, A, B, 260, 140, MINI_DEPTH);
+export function contactSection(S, box, v) {
+  const F = frame(S, box);
+  return groundFill(S, F) + stripSvg(S, F, { w: 2.4 }) + S.cps.map(c => dipLine(F, c, v.angle, v.sense, { c: C.ink, w: 1.15 })).join('') + contactDots(S, F, 1.3) + frameRect(F);
+}
+export function structureSection(S, box) {
+  const F = frame(S, box);
+  return groundFill(S, F) + clipped(S, F, regionsSvg(S, F, { lineW: .7 }), { ground: true }) + stripSvg(S, F, { w: 1.6 }) + frameRect(F);
+}
 /* le terrain : aplat clair sous la ligne de crête, puis le cadre */
 export const groundFill = (S, F, fill = '#f3ece0') => path(terrainPoly(S, F), { fill, stroke: null });
 export const frameRect = F => rect(F.box.x, F.box.y, F.box.w, F.box.h, { fill: 'none', stroke: C.ink, w: .6 });

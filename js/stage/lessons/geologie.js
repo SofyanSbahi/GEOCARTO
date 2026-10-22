@@ -3,6 +3,7 @@
    Tout vient du moteur Géologie : régions, contacts, trois points (vérifiés par planeFrom3) — aucune géométrie n'est dessinée à la main.
    Principe de la leçon : on PRÉDIT (vote) avant d'expliquer, on DÉMONTRE (construction pas à pas) avant d'énoncer la règle. */
 import * as K from '../kit.js';
+import { dipDirectionCandidates } from '../../engine/geology/index.js';
 import { toMap, levelPaths } from './maps.js';
 import { geoMapSvg, legendSvg, timeArrow, dipSymbol, mapPt, contactMid, azArrow, callout, toward, top } from './geomap.js';
 import { missionGeo, demoGeo, galerie, exoGeo, extremes, walkLine, BOX, WIN } from './geoworld.js';
@@ -144,7 +145,21 @@ export const geocarte = {
         draw: (st, X) => {
           const M = demoGeo(), T = M.tp, d = M.geo.dem, L = loupe(M, T, VB), sx = Math.sin(T.strikeAz * RAD), sy = -Math.cos(T.strikeAz * RAD), [e0, e1] = clipRay(T.p[1], { x: sx, y: sy }, d.W, d.H).map(L.zp);
           const [p1, p2, p3] = T.p.map(L.zp), map = geoMapSvg(M, VB, { dim: other(M, [T.u, T.v]), contact: [T.u, T.v], hlW: 1.3 / L.k, contactW: .45, eq: 40, eqOp: .4 });
-          return L.wrap(map, line(e0[0], e0[1], e1[0], e1[1], { c: C.acc, w: 1.4 })) + [p1, p2, p3].map(q => circ(q[0], q[1], 1.5, { fill: C.ink, stroke: '#fff', w: .5 })).join('') + threeTags([p1, p2, p3], T.p.map(p => `${X.nf(p.z, 0)} m`), 3.6, [C.blue, C.ink, C.blue], 4.2) +
+          /* QUATRE FLÈCHES lettrées issues d'un même point (engine/geology/distractors.js) : le vrai sens du pendage, son inverse, la direction du contact et la pente du terrain.
+             Les altitudes (contexte) deviennent discrètes (quiet) : l'attention va aux quatre options. */
+          /* origine des flèches : parmi les points lisibles, celui dont les lettres gênent le moins les étiquettes d'altitude (et qui reste dans la carte) ; les quatre
+             flèches restent écartées d'au moins 25° (le moteur le garantit pour chaque origine). */
+          const tagBoxes = [p1, p2, p3].map((q, i) => K.tagBox(q[0] + (i === 1 ? -3 : 3), q[1] + (i === 1 ? 0 : i === 0 ? 3.6 : -3.6), `${X.nf(T.p[i].z, 0)} m`, { size: 4.2, anchor: i === 1 ? 'end' : 'start' }));
+          const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }), cen = { x: (T.p[0].x + T.p[1].x + T.p[2].x) / 3, y: (T.p[0].y + T.p[1].y + T.p[2].y) / 3 };
+          const ARROW = 12, tips = (cd, o0) => cd.candidates.map(cn => { const dx = Math.sin(cn.az * RAD), dy = -Math.cos(cn.az * RAD); return [o0[0] + dx * (ARROW + 4), o0[1] + dy * (ARROW + 4)]; });
+          const crowd = (cd, o0) => tips(cd, o0).reduce((n, q) => n + tagBoxes.filter(b => q[0] + 3.4 > b.x0 && q[0] - 3.4 < b.x0 + b.w && q[1] + 3.4 > b.y0 && q[1] - 3.4 < b.y0 + b.h).length + (q[0] < VB.x + 3.4 || q[0] > VB.x + VB.w - 3.4 || q[1] < VB.y + 3.4 || q[1] > VB.y + VB.h - 3.4 ? 5 : 0), 0);
+          let pick = null;
+          [cen, T.Q, mid(T.p[0], T.p[2]), mid(T.p[0], T.p[1]), T.p[1]].forEach(o => { const cd = dipDirectionCandidates({ dipAz: T.dipAz, strikeAz: T.strikeAz, dem: d, origins: [o] }), o0 = L.zp(cd.origin); if (!cd.ok) return; const sc = crowd(cd, o0); if (!pick || sc < pick.sc) pick = { cd, o0, sc }; });
+          if (!pick) { const cd = dipDirectionCandidates({ dipAz: T.dipAz, strikeAz: T.strikeAz, dem: d, origins: [cen, T.Q, T.p[1]] }); pick = { cd, o0: L.zp(cd.origin) }; }
+          const { cd, o0 } = pick, letter = X.letterOf || (c => 'ABCD'[c]);
+          const arrows = cd.candidates.map((cn, c) => { const dx = Math.sin(cn.az * RAD), dy = -Math.cos(cn.az * RAD), ex = o0[0] + dx * ARROW, ey = o0[1] + dy * ARROW;
+            return arrow(o0[0], o0[1], ex, ey, { c: '#fff', w: 3.8, head: 6.4 }) + arrow(o0[0], o0[1], ex, ey, { c: C.ink, w: 1.8, head: 4.4 }) + badge(ex + dx * 4, ey + dy * 4, letter(c), { r: 3.2, fill: C.ink, size: 4.4 }); }).join('');
+          return L.wrap(map, line(e0[0], e0[1], e1[0], e1[1], { c: C.acc, w: 1.4 })) + [p1, p2, p3].map(q => circ(q[0], q[1], 1.5, { fill: C.ink, stroke: '#fff', w: .5 })).join('') + K.quiet(threeTags([p1, p2, p3], T.p.map(p => `${X.nf(p.z, 0)} m`), 3.6, [C.blue, C.ink, C.blue], 4.2)) + circ(o0[0], o0[1], 1.4, { fill: '#fff', stroke: C.ink, w: .6 }) + arrows +
             arrow(VB.x + VB.w - 6, VB.y + 11, VB.x + VB.w - 6, VB.y + 4, { c: C.ink, w: 1, head: 2.4 }) + txt(VB.x + VB.w - 10, VB.y + 5, 'N', { size: 4, w: 800 }) + top(X.t('geocarte.v3.top', { z: X.nf(T.p[1].z, 0) }));
         } },
       q: 1 },

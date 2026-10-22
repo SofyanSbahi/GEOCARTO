@@ -78,6 +78,7 @@ function fitCaption(capEl, variants, uc) {
    Figure d'un vote : question à gauche, 4 cartes lettrées à droite, barres de résultat, puis correction nommée
    ===================================================================== */
 function voteFig(L, sc, S, X, P) {
+  if (sc.vote.layout === 'gallery') return galleryFig(L, sc, S, X, P);
   const v = sc.vote, m = v.opts.length, tot = S.votes[sc.id] || new Array(m).fill(0), sum = tot.reduce((a, b) => a + b, 0), st = S.st;
   let out = '';
   /* gauche : figure de la scène ou, à défaut, la question en grand */
@@ -101,6 +102,30 @@ function voteFig(L, sc, S, X, P) {
     }
     if (rev) c += ok ? K.path(`M${x0 + w - 9.4} ${y + ch / 2 + .6}l2 2.2l4.2-5`, { stroke: K.C.green, w: 1.1 }) : K.path(`M${x0 + w - 9.2} ${y + ch / 2 - 1.7}l3.4 3.4M${x0 + w - 5.8} ${y + ch / 2 - 1.7}l-3.4 3.4`, { stroke: K.C.red, w: 1 });
     out += K.el('g', { 'data-vote': d, class: 'st-l-card' + (dim ? ' dim' : ''), role: 'button' }, c);
+  });
+  return out;
+}
+/* Vote « galerie » (v3.1, WP3) : le contexte (question, carte) à gauche — v.draw, dans x < 58 — et quatre options FIGURÉES en grille 2 × 2 à droite.
+   Chaque mauvaise réponse est la figure du malentendu (v.optFig(c, box, X), calculée par le moteur) : le vote diagnostique et la salle voit pourquoi c'est faux.
+   Une option = une lettre en gros + sa figure, SANS autre texte ; mêmes règles que les cartes (décompte, barre, ✓ / ✗, revote). d = lettre affichée, ci = option canonique. */
+function galleryFig(L, sc, S, X, P) {
+  const v = sc.vote, m = P.length, tot = S.votes[sc.id] || new Array(m).fill(0), sum = tot.reduce((a, b) => a + b, 0), st = S.st, rev = st >= 2, pre = S.pre && S.pre[sc.id], ps = pre ? pre.reduce((a, b) => a + b, 0) : 0;
+  let out = K.g(v.draw(st, X), {});
+  const cw = 48, chh = 32.5, x0 = 60, y0 = 2, gx = 2, gy = 1.5;
+  P.forEach((ci, d) => {
+    const o = v.opts[ci], ok = o.ok, col = rev && ok ? K.C.green : K.C.ink, x = x0 + (d % 2) * (cw + gx), y = y0 + (d >> 1) * (chh + gy), fb = { x: x + 1, y: y + 7.6, w: cw - 2, h: chh - 7.6 - 3.4 };
+    let c = K.rect(x, y, cw, chh, { fill: rev && ok ? '#e3f5ea' : K.C.paper, stroke: col, w: rev && ok ? 1 : .6, rx: 1.4 });
+    c += v.optFig(ci, fb, X);
+    c += K.badge(x + 4.8, y + 4.4, LET[d], { r: 3.4, fill: col, size: 4.6 });
+    if (st >= 1) {
+      const n = tot[ci] || 0, bw = sum ? (cw - 3) * n / sum : 0;
+      c += K.rect(x + 1.5, y + chh - 2.6, cw - 3, 1.5, { fill: K.C.soft, rx: .7 }) + (bw ? K.rect(x + 1.5, y + chh - 2.6, bw, 1.5, { fill: rev ? (ok ? K.C.green : K.C.red) : K.C.blue, rx: .7 }) : '');
+      c += K.txt(x + cw - (rev ? 13 : 4), y + 4.4, String(n), { size: 5.4, anchor: 'end', w: 800, fixed: true });   // taille fixe : l'en-tête de la case n'a pas de marge (4:3 / salle)
+      if (ps) c += K.rect(x + 1.5, y + chh - 1.05, (cw - 3) * (pre[ci] || 0) / ps, .8, { fill: K.C.mute, rx: .4 });
+    }
+    if (rev) c += ok ? K.path(`M${x + cw - 9.2} ${y + 4.8}l2 2.2l4.2-5`, { stroke: K.C.green, w: 1.1 }) : K.path(`M${x + cw - 9} ${y + 2.6}l3.4 3.4M${x + cw - 5.6} ${y + 2.6}l-3.4 3.4`, { stroke: K.C.red, w: 1 });
+    const label = v.label ? v.label(ci, X) : t(key(L, sc, 'o' + ci));
+    out += K.el('g', { 'data-vote': d, class: 'st-l-card' + (rev && !ok ? ' dimf' : ''), role: 'button', 'aria-label': `${LET[d]} : ${label}` }, c);
   });
   return out;
 }

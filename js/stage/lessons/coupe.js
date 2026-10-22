@@ -4,10 +4,10 @@
    On ne montre jamais la coupe finie d'emblée : on la construit pas à pas, puis le moteur trace la coupe exacte et on compare (correction progressive).
    Tout vient du moteur Géologie (coupe exacte, points de contact en surface, pendage apparent). */
 import * as K from '../kit.js';
-import { geoMapSvg, mapPt, azArrow, callout, toward, top, legendSvg } from './geomap.js';
-import { missionGeo, tabGeo, exoGeo, galerie, TAB_AB, EXO_AB, midLine } from './geoworld.js';
+import { geoMapSvg, mapPt, azArrow, callout, toward, top, legendSvg, timeArrow } from './geomap.js';
+import { missionGeo, tabGeo, exoGeo, galerie, foldGeos, TAB_AB, EXO_AB, midLine } from './geoworld.js';
 import * as S from './geosection.js';
-import { apparentDip } from '../../engine/geology/index.js';
+import { apparentDip, contactVariants } from '../../engine/geology/index.js';
 import { recapFig } from './mission.js';
 const { C, txt, line, rect, circ, path, poly, arrow, at, badge, tag } = K;
 
@@ -34,13 +34,16 @@ export const coupe = {
         return o + (st === 0 ? bot(X.t('coupe.hook.t0')) : st === 1 ? bot(X.t('coupe.hook.t1')) : bot(X.t('coupe.hook.t2'), { fill: C.acc }));
       } },
     { id: 'v1', step: 'verify', kind: 'vote', min: 2,
-      vote: { opts: [{ ok: true }, { mis: 'g-coupe-sens' }, { mis: 'g-coupe-vert' }, { mis: 'g-coupe-horiz' }],
+      vote: { opts: [{ ok: true }, { mis: 'g-coupe-sens' }, { mis: 'g-coupe-vert' }, { mis: 'g-coupe-horiz' }], layout: 'gallery',
+        /* options FIGURÉES (engine/geology/distractors.js) : le vrai pendage apparent, le sens inversé, des contacts verticaux, des contacts à plat */
+        optFig: (c, box) => { const { M } = ms(); return S.contactSection(S.miniSectionOf(M, M.A, M.B), box, contactVariants({ apparent: M.apparent, sense: sense(M, M.dipAz) })[c]); },
+        /* contexte : la question et la carte (grande, avec la flèche de pendage bien visible) ; tout reste dans x < 54 */
         draw: (st, X) => {
-          const { M, s } = ms(), box = { x: 4, y: 26, w: 82, h: 36 }, F = S.frame(s, box), ins = { x: 60, y: 2, w: 26, h: 17.9 }, a = mapPt(M, ins, M.A), b = mapPt(M, ins, M.B), c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-          const f = K.fit(X.t('coupe.v1.top', { dip: M.dip, dir: toward(M.dipAz) }), 52, 4.8, 3);
-          return S.groundFill(s, F) + S.stripSvg(s, F, { w: 2 }) + S.contactDots(s, F, 1.1) + S.frameRect(F) + ab(F, s) +
-            geoMapSvg(M, ins, {}) + line(a[0], a[1], b[0], b[1], { c: C.ink, w: .9 }) + azArrow(c[0], c[1], M.dipAz, 6, { c: C.acc, w: 1.2, head: 2.4 }) +
-            K.txtL(4, 5.2, f.lines, { size: f.size, lh: f.size * 1.2, anchor: 'start', w: 800, fixed: true });
+          const { M } = ms(), ins = { x: 4, y: 36, w: 46, h: 31.6 }, a = mapPt(M, ins, M.A), b = mapPt(M, ins, M.B), c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+          const f = K.fitBox(X.t('coupe.v1.top', { dip: M.dip, dir: toward(M.dipAz) }), 48, 29, 5.6, 4, 1.2);   // ≤ 29 u de haut : le texte ne mord jamais sur la carte (y ≥ 36)
+          return K.txtL(4, 5.4, f.lines, { size: f.size, lh: f.size * 1.2, anchor: 'start', w: 800, fixed: true }) + geoMapSvg(M, ins, {}) + line(a[0], a[1], b[0], b[1], { c: C.ink, w: 1.1 }) +
+            badge(a[0], a[1], 'A', { r: 2.4, fill: C.acc, quiet: true }) + badge(b[0], b[1], 'B', { r: 2.4, fill: C.acc, quiet: true }) +
+            azArrow(c[0], c[1], M.dipAz, 12, { c: '#fff', w: 3.8, head: 6.4 }) + azArrow(c[0], c[1], M.dipAz, 12, { c: C.acc, w: 2, head: 4.6 });
         } },
       q: 1 },
     { id: 'horiz', step: 'verify', kind: 'build', steps: 4, min: 2,
@@ -101,11 +104,16 @@ export const coupe = {
         return o + [bot(X.t('coupe.ev.t0', { n: ev })), bot(X.t(ev === 1 ? 'coupe.ev.t1b' : 'coupe.ev.t1', { m: X.nf(S.drawnAngle(a, ev), 0), a: X.nf(a, 0) }), { fill: ev === 1 ? C.pri : C.red }), bot(X.t('coupe.ev.t2'), { fill: C.pri })][st];
       } },
     { id: 'v3', step: 'suppose', kind: 'vote', min: 2,
-      vote: { opts: [{ ok: true }, { mis: 'g-coupe-pli-inv' }, { mis: 'g-coupe-pli-mono' }, { mis: 'g-coupe-pli-tab' }],
+      vote: { opts: [{ ok: true }, { mis: 'g-coupe-pli-inv' }, { mis: 'g-coupe-pli-mono' }, { mis: 'g-coupe-pli-tab' }], layout: 'gallery',
+        /* options FIGURÉES : la même carte, quatre structures sur le MÊME terrain (anticlinal, cuvette, bandes inclinées, couches horizontales) */
+        optFig: (c, box) => { const g = foldGeos()[c].ctx, l = midLine(g); return S.structureSection(S.miniSectionOf(g, l.A, l.B), box); },
         draw: (st, X) => {
-          const G = galerie('anticlinal'), box = { x: 2, y: 13, w: 66, h: 45.5 }, d = G.geo.dem, a = mapPt(G, box, midLine(G).A), b = mapPt(G, box, midLine(G).B);
-          return geoMapSvg(G, box, {}) + line(a[0], a[1], b[0], b[1], { c: C.ink, w: 1.1 }) + badge(a[0], a[1], 'A', { r: 2.4, fill: C.acc, quiet: true }) + badge(b[0], b[1], 'B', { r: 2.4, fill: C.acc, quiet: true }) +
-            legendSvg(G, 72, 13, 13, 45) + txt(78.5, 10.4, X.t('coupe.v3.young'), { size: 3.6, w: 700, fill: C.mute }) + txt(78.5, 61.6, X.t('coupe.v3.old'), { size: 3.6, w: 700, fill: C.mute }) + top(X.t('coupe.v3.top'));
+          /* mise en page dynamique : le titre (≤ 2 lignes, plus grand en 4:3 / en salle) pousse la carte vers le bas ; le sens du temps est une flèche, pas deux mots */
+          const G = galerie('anticlinal'), d = G.geo.dem, f = K.fit(X.t('coupe.v3.top'), 54, 5.2, 2), y0 = 5 + f.lines.length * f.size * 1.2 + 2, box = { x: 2, y: y0, w: 36, h: 36 * (d.H - 1) / (d.W - 1) };
+          const a = mapPt(G, box, midLine(G).A), b = mapPt(G, box, midLine(G).B), lg = Math.min(36, 66 - y0);
+          return K.txtL(3, 5, f.lines, { size: f.size, lh: f.size * 1.2, anchor: 'start', w: 800, fixed: true }) + geoMapSvg(G, box, {}) + line(a[0], a[1], b[0], b[1], { c: C.ink, w: 1.1 }) +
+            badge(a[0], a[1], 'A', { r: 2.4, fill: C.acc, quiet: true }) + badge(b[0], b[1], 'B', { r: 2.4, fill: C.acc, quiet: true }) +
+            legendSvg(G, 40, y0, 9, lg) + timeArrow(57.5, y0 + 1, y0 + lg - 1, X.t('geocarte.time'));
         } },
       q: 1 },
     { id: 'struct', step: 'suppose', kind: 'show', steps: 5, min: 4,

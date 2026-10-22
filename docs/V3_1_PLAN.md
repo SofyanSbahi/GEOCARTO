@@ -1,6 +1,6 @@
 # GéoCarto v3.1 — « Raisonner, pas réciter » · plan de mise en œuvre
 
-> Statut : **WP0, WP1 et WP2 réalisés** (2026-10-21 / 22) ; WP3 à WP7 à venir · version 1.2
+> Statut : **WP0 à WP3 réalisés** (2026-10-21 / 22) ; WP4 à WP7 à venir · version 1.3
 > Public visé : étudiants de première année de géologie, sans acquis en topographie, cartographie ni raisonnement géologique.
 > Ce document évolue avec les versions : mettre à jour la section 9 (journal) à chaque jalon.
 
@@ -169,6 +169,8 @@ Taille : S petite · M moyenne · L grande. Ordre d'exécution : WP0 → WP1 →
 |---|---|
 | 2026-10-21 | Plan v1.0 rédigé après audit visuel des 27 scènes (103 écrans) ; décisions D1–D5 enregistrées. Aucun code modifié. |
 | 2026-10-21 | **WP0 + WP1 réalisés** (v1.1) : voir §10. 141 tests verts ; porte de projection `npm run gate:stage` : 1 552 écrans géologie × 4 formats × 4 échelles sans défaut. |
+| 2026-10-22 | **WP2 réalisé** (v1.2) : fil du raisonnement (brouillon à relire). 148 tests. |
+| 2026-10-22 | **WP3 réalisé** (v1.3) : options figurées. 162 tests. |
 
 ## 10. État d'avancement
 
@@ -211,3 +213,12 @@ Taille : S petite · M moyenne · L grande. Ordre d'exécution : WP0 → WP1 →
 - **Statut de brouillon** : `THREAD_DRAFT = true` ; mention « brouillon automatique — à relire par un géologue » dans le présentateur et sur la fiche. Passer à `false` seulement après relecture (nom et date à noter ici).
 - **Correspondance v0** (figée par `tests/thread.test.js`) : *Cartes* — hook, v1, légende → Observer ; contact, horiz, v2 → Situer ; dip, v3, pr → Mesurer ; âge, v4, recoup → Dater ; struct, v5 → Supposer ; bilan → les six. *Coupes* — hook → Observer ; v1, horiz, mono, pr → Vérifier ; v2, erreurs, apparent, ev → Mesurer ; v3, struct → Supposer ; bilan → les six. **Points à trancher par le relecteur** : v2/erreurs (diagnostic d'une coupe fausse) en « Mesurer » ou « Vérifier » ? ; la construction d'une coupe avant l'intuition du pendage apparent (cf. P1).
 - **Mesure** (`npm run gate:stage`) : 873 écrans géologie × 3 formats × 3 échelles : 0 défaut ; 148 tests (7 nouveaux, vérifiés par 4 régressions volontaires).
+
+### WP3 — Options figurées : réalisé (2026-10-22)
+- **Moteur** `js/engine/geology/distractors.js` (pur, DOM-free, additif : golden et `ENGINE_VERSION` inchangés) : `contactVariants` (vrai pendage apparent, sens inversé, contacts verticaux, contacts à plat), `dipDirectionCandidates` (flèches : sens du pendage, son inverse, direction du contact, pente du terrain ; origine choisie pour un écart ≥ 25°), `foldVariants` (anticlinal, cuvette, bandes inclinées, couches horizontales **sur le même terrain**), `gridDifference`, `lineSeparation`, `downhillAzimuth`.
+- **Vote « galerie »** (`vote.layout = 'gallery'`, `lesson.js`) : contexte à gauche, grille 2 × 2 de petites coupes à droite, une lettre en gros par option et **aucun autre texte** ; décompte, barre, ✓/✗ et revote comme les cartes ; l'option fausse reste bien visible après la correction (opacité 0,8) car c'est elle qu'on discute.
+- **Votes convertis** : *Coupes* v1 « Où vont les contacts ? » (galerie) et v3 « Quelle forme en coupe ? » (galerie) ; *Cartes* v3 « Vers où plonge la couche ? » (quatre **flèches lettrées** sur la carte, les altitudes deviennent discrètes). Les lettres suivent l'ordre mélangé du WP0 (`X.letterOf`). *Coupes* v2 (« Quelle est l'erreur ? ») montrait déjà la coupe fausse : inchangé.
+- **Ce que l'audit visuel a corrigé en cours de route** (invisible aux tests) : coupes trop plates (ajout d'une profondeur `MINI_DEPTH` = 0,35), trait trop épais pour « contacts à plat », monoclinal qui plongeait dans la direction de la coupe (bandes plates, indiscernables des couches horizontales), couches horizontales d'une seule teinte, légende « récent / ancien » qui débordait en 4:3 (remplacée par une flèche du temps), texte de question qui recouvrait la carte.
+- **Contre-parties à connaître** : la carte de contexte du vote « Quelle forme en coupe ? » est ~45 % plus petite (la place est donnée aux quatre coupes) ; dans le vote de direction, les lettres A et D restent proches des étiquettes d'altitude (lisibles, un peu serrées).
+- **Hors lot** : largeur adaptative des cartes de texte (F7) pour les votes restés verbaux (*Cartes* v5 notamment) — non fait.
+- **Mesure** : 162 tests (14 nouveaux : `distractors`, dont l'orientation du monoclinal sur la coupe montrée) ; 7 régressions volontaires toutes détectées ; porte de projection : 0 défaut sur les formats testés.

@@ -101,6 +101,7 @@ body.stage-on main,body.stage-pv main{padding:0;margin:0;max-width:none}
 .st-l-fig svg text.st-t{font-family:inherit;paint-order:stroke;stroke:#fff;stroke-width:.3em;stroke-linejoin:round;font-variant-numeric:tabular-nums}
 .st-l-fig svg text.st-t.nh{stroke:none}
 .st-l-card{cursor:pointer}.st-l-card.dim{opacity:.5}
+.st-l-card.dimf{opacity:.8}   /* option figurée fausse, après la correction : on la voit encore bien (c'est elle qu'on discute) */
 .st-r.enter{animation:st-in .5s ease-out both}
 .st-r.enter .st-draw{stroke-dasharray:1;stroke-dashoffset:1;animation:st-draw 1s ease-out .15s forwards}
 @keyframes st-in{from{opacity:0;transform:translateY(1.6px)}to{opacity:1;transform:none}}
