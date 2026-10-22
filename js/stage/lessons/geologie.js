@@ -128,7 +128,7 @@ export const geocarte = {
         const [p1, p2, p3] = T.p.map(zp), Q = zp(T.Q), sx = Math.sin(T.strikeAz * RAD), sy = -Math.cos(T.strikeAz * RAD), [e0, e1] = clipRay(ST, { x: sx, y: sy }, d.W, d.H).map(zp);
         const t = (T.p[0].x - ST.x) * sx + (T.p[0].y - ST.y) * sy, F = zp({ x: ST.x + sx * t, y: ST.y + sy * t }), mid = [(p2[0] + Q[0]) / 2, (p2[1] + Q[1]) / 2];
         const map = geoMapSvg(M, BOX, { dim: other(M, [T.u, T.v]), contact: [T.u, T.v], hlW: 1.3 / L.k, contactW: .45, eq: 40, eqOp: .4 });
-        let inner = at(st, 2, line(p1[0], p1[1], p3[0], p3[1], { c: C.ink, w: .6, dash: '1.5 1.2' }), { rest: st > 2 }) + at(st, 3, line(e0[0], e0[1], e1[0], e1[1], { c: C.acc, w: 1.4 })) +
+        let inner = at(st, 2, line(p1[0], p1[1], p3[0], p3[1], { c: C.ink, w: .6, dash: '1.5 1.2' }), { rest: st > 2 }) + at(st, 3, line(e0[0], e0[1], e1[0], e1[1], { c: '#fff', w: 2.6 }) + line(e0[0], e0[1], e1[0], e1[1], { c: C.acc, w: 1.4 })) +
           at(st, 4, azArrow(mid[0], mid[1], T.dipAz, 15, { c: C.ink, w: 2, head: 5 }), { rest: st > 4 }) + at(st, 5, line(F[0], F[1], p1[0], p1[1], { c: C.ink, w: 1.3, dash: '1.6 1' }));
         let o = L.wrap(map, inner);
         o += at(st, 1, [p1, p2, p3].map(q => circ(q[0], q[1], 1.6, { fill: C.ink, stroke: '#fff', w: .5 })).join('') + threeTags([p1, p2, p3], T.p.map(p => `${X.nf(p.z, 0)} m`), 4, [C.blue, C.blue, C.blue], 4.6), { rest: st > 1 });
@@ -159,7 +159,7 @@ export const geocarte = {
           const { cd, o0 } = pick, letter = X.letterOf || (c => 'ABCD'[c]);
           const arrows = cd.candidates.map((cn, c) => { const dx = Math.sin(cn.az * RAD), dy = -Math.cos(cn.az * RAD), ex = o0[0] + dx * ARROW, ey = o0[1] + dy * ARROW;
             return arrow(o0[0], o0[1], ex, ey, { c: '#fff', w: 3.8, head: 6.4 }) + arrow(o0[0], o0[1], ex, ey, { c: C.ink, w: 1.8, head: 4.4 }) + badge(ex + dx * 4, ey + dy * 4, letter(c), { r: 3.2, fill: C.ink, size: 4.4 }); }).join('');
-          return L.wrap(map, line(e0[0], e0[1], e1[0], e1[1], { c: C.acc, w: 1.4 })) + [p1, p2, p3].map(q => circ(q[0], q[1], 1.5, { fill: C.ink, stroke: '#fff', w: .5 })).join('') + K.quiet(threeTags([p1, p2, p3], T.p.map(p => `${X.nf(p.z, 0)} m`), 3.6, [C.blue, C.ink, C.blue], 4.2)) + circ(o0[0], o0[1], 1.4, { fill: '#fff', stroke: C.ink, w: .6 }) + arrows +
+          return L.wrap(map, line(e0[0], e0[1], e1[0], e1[1], { c: '#fff', w: 2.6 }) + line(e0[0], e0[1], e1[0], e1[1], { c: C.acc, w: 1.4 })) + [p1, p2, p3].map(q => circ(q[0], q[1], 1.5, { fill: C.ink, stroke: '#fff', w: .5 })).join('') + K.quiet(threeTags([p1, p2, p3], T.p.map(p => `${X.nf(p.z, 0)} m`), 3.6, [C.blue, C.ink, C.blue], 4.2)) + circ(o0[0], o0[1], 1.4, { fill: '#fff', stroke: C.ink, w: .6 }) + arrows +
             arrow(VB.x + VB.w - 6, VB.y + 11, VB.x + VB.w - 6, VB.y + 4, { c: C.ink, w: 1, head: 2.4 }) + txt(VB.x + VB.w - 10, VB.y + 5, 'N', { size: 4, w: 800 }) + top(X.t('geocarte.v3.top', { z: X.nf(T.p[1].z, 0) }));
         } },
       q: 1 },
@@ -167,7 +167,7 @@ export const geocarte = {
       fig: (st, p, X) => {
         const M = missionGeo(), W = walkLine(M, M.dipAz), a = mapPt(M, BOX, W.a), b = mapPt(M, BOX, W.b);
         let o = geoMapSvg(M, BOX, { labels: true }) + legend(M, null);
-        o += at(st, 1, arrow(a[0], a[1], b[0], b[1], { c: C.acc, w: 1.5, head: 3.6 }), { rest: st > 1 });
+        o += at(st, 1, arrow(a[0], a[1], b[0], b[1], { c: '#fff', w: 3, head: 4.8 }) + arrow(a[0], a[1], b[0], b[1], { c: C.acc, w: 1.5, head: 3.6 }), { rest: st > 1 });
         o += at(st, 2, legendArrow(M, X.t('geocarte.time')), { rest: st > 2 });
         o += st === 0 ? at(st, 0, callCol(X.t('geocarte.age.t0'))) : st === 1 ? at(st, 1, callCol(X.t('geocarte.age.t1', { dir: toward(M.dipAz) }))) : st === 2 ? at(st, 2, callCol(X.t('geocarte.age.t2'), { fill: C.acc })) : at(st, 3, callCol(X.t('geocarte.age.t3'), { fill: C.pri }));
         return o;
@@ -176,7 +176,7 @@ export const geocarte = {
       vote: { opts: [{ ok: true }, { mis: 'g-agesens' }, { mis: 'g-agememe' }, { mis: 'g-agerelief' }],
         draw: (st, X) => {
           const M = missionGeo(), W = walkLine(M, M.dipAz), a = mapPt(M, VB, W.a), b = mapPt(M, VB, W.b);
-          return geoMapSvg(M, VB, { labels: true }) + arrow(a[0], a[1], b[0], b[1], { c: C.acc, w: 1.5, head: 3.6 }) + top(X.t('geocarte.v4.top', { dir: toward(M.dipAz) }));
+          return geoMapSvg(M, VB, { labels: true }) + arrow(a[0], a[1], b[0], b[1], { c: '#fff', w: 3, head: 4.8 }) + arrow(a[0], a[1], b[0], b[1], { c: C.acc, w: 1.5, head: 3.6 }) + top(X.t('geocarte.v4.top', { dir: toward(M.dipAz) }));
         } },
       q: 1 },
     { id: 'recoup', step: 'date', kind: 'show', steps: 3, min: 3,
@@ -200,7 +200,7 @@ export const geocarte = {
         const E = exoGeo(), T = E.tp, d = E.geo.dem, L = loupe(E, T, BOX), zp = L.zp, sx = Math.sin(T.strikeAz * RAD), sy = -Math.cos(T.strikeAz * RAD);
         const map = geoMapSvg(E, BOX, { eq: 40, eqOp: .5, contact: [T.u, T.v], hlW: 1 / L.k, contactW: .45 }), pts = T.p.map(zp);
         const [e0, e1] = clipRay(T.p[1], { x: sx, y: sy }, d.W, d.H).map(zp), c = zp(T.Q), mid = [(pts[1][0] + c[0]) / 2, (pts[1][1] + c[1]) / 2];
-        let o = L.wrap(map, st >= 2 ? line(e0[0], e0[1], e1[0], e1[1], { c: C.acc, w: 1.4 }) + azArrow(mid[0], mid[1], T.dipAz, 15, { c: C.ink, w: 2, head: 5 }) : '');
+        let o = L.wrap(map, st >= 2 ? line(e0[0], e0[1], e1[0], e1[1], { c: '#fff', w: 2.6 }) + line(e0[0], e0[1], e1[0], e1[1], { c: C.acc, w: 1.4 }) + azArrow(mid[0], mid[1], T.dipAz, 15, { c: C.ink, w: 2, head: 5 }) : '');
         o += at(st, 0, pts.map(q => circ(q[0], q[1], 1.6, { fill: C.ink, stroke: '#fff', w: .5 })).join('') + threeTags(pts, T.p.map(p => `${X.nf(p.z, 0)} m`), 4, [C.blue, C.blue, C.blue], 4.6), { rest: true });
         o += scaleBar(d, L.k, BOX, pts);
         return st < 2 ? o : o + callout(CX, 30, X.t('geocarte.pr.t2', { dip: X.nf(T.dip, 0), dir: toward(T.dipAz), sz: X.nf(T.strikeAz, 0) }), { fill: C.pri });
