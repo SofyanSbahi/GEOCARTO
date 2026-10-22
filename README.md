@@ -57,3 +57,6 @@ npm run check:dist    # reconstruit et échoue si dist/app.js diffère du fichie
 ```
 Règle : toute modification de `js/` ou de `vendor/` doit être livrée **avec** le `dist/app.js` régénéré (GitHub Pages sert `dist/` tel quel). L'intégration continue (`.github/workflows/ci.yml`) échoue si le bundle versionné ne correspond pas aux sources.
 Les références de non-régression sont dans `tests/golden/` ; `tests/legacy/` conserve le code d'origine pour les régénérer (`npm run golden`, uniquement pour figer un comportement voulu). Les scripts navigateur de `tools/` (Python + Playwright) s'exécutent contre un serveur local (`python3 -m http.server 8765`).
+
+## Version 3.1 (candidat à la livraison)
+Revue : [docs/V3_1_REVIEW.md](docs/V3_1_REVIEW.md) · liste de contrôle et ordre de fusion : [docs/V3_1_RELEASE.md](docs/V3_1_RELEASE.md) · essai en classe : [docs/V3_1_CLASSROOM_PROTOCOL.md](docs/V3_1_CLASSROOM_PROTOCOL.md).
