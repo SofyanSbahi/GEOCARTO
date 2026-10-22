@@ -12,7 +12,8 @@
     "golden": "node tools/make-golden.mjs",
     "build": "sh build.sh",
     "check:dist": "sh build.sh && git diff --exit-code -- dist/app.js",
-    "gate:stage": "node tools/stage/stage_gate.mjs"
+    "gate:stage": "node tools/stage/stage_gate.mjs",
+    "audit:geology": "node tools/stage/audit_geology.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2"

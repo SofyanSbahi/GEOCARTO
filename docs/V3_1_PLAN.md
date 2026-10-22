@@ -1,6 +1,6 @@
 # GéoCarto v3.1 — « Raisonner, pas réciter » · plan de mise en œuvre
 
-> Statut : **WP0 à WP3 réalisés** (2026-10-21 / 22) ; WP4 à WP7 à venir · version 1.3
+> Statut : **WP0 à WP7 réalisés** (2026-10-21 / 22) · version 1.5
 > Public visé : étudiants de première année de géologie, sans acquis en topographie, cartographie ni raisonnement géologique.
 > Ce document évolue avec les versions : mettre à jour la section 9 (journal) à chaque jalon.
 
@@ -172,6 +172,7 @@ Taille : S petite · M moyenne · L grande. Ordre d'exécution : WP0 → WP1 →
 | 2026-10-22 | **WP2 réalisé** (v1.2) : fil du raisonnement (brouillon à relire). 148 tests. |
 | 2026-10-22 | **WP3 réalisé** (v1.3) : options figurées. 162 tests. |
 | 2026-10-22 | **WP4 réalisé** (v1.4) : leçon préalable « Lire le relief » (brouillon à relire). 172 tests. |
+| 2026-10-22 | **WP5, WP6, WP7 réalisés** (v1.5) : palette de projection, liserés, aide enseignant, outil d'audit, livraison. 179 tests. Voir `docs/V3_1_REVIEW.md`. |
 
 ## 10. État d'avancement
 
@@ -230,3 +231,17 @@ Taille : S petite · M moyenne · L grande. Ordre d'exécution : WP0 → WP1 →
 - **Lien** : la note de la première scène de « Cartes géologiques » suggère le préalable aux groupes peu à l'aise avec les courbes.
 - **Mesure** : 172 tests (6 nouveaux : altitudes de P/Q, pointe du V, textes et malentendus) ; porte de projection prereq + geocarte + coupe : 0 défaut (2 formats × 3 échelles).
 - **Limite connue** : sur la colline de démonstration, P (500 m) et Q (300 m) ne sont distants que d'~10 unités : la flèche du vote 2 est courte (lisible, mais à agrandir si la relecture le demande). Seuils et formulations à relire par un enseignant de topographie.
+
+### WP5 — Formations lisibles en projection : réalisé (2026-10-22)
+- `js/stage/palette.js` : **palette de projection** (le moteur garde ses couleurs, figées par le *golden*). 7 formations changent de teinte (Lias, Dogger, Malm, Crétacé inf./sup., Silurien, Cambrien) ; toutes les paires voisines ont **ΔE76 ≥ 10** en vision normale, sous projecteur délavé (40 % de gris), en deutéranopie (Machado) et en combinant les deux (`tests/palette.test.js`). Avant : 3 paires sous 10.
+- **Liseré blanc** sous le contact surligné, les flèches de direction, le trait de marche et le symbole de pendage (rouge seul : < 3:1 sur 6 formations sur 8). **Opacité des formations estompées 0,22 → 0,4** (cartes et coupes). **γ / δ → « Gr » / « Do »** dans légendes et étiquettes.
+- **Non fait, décidé** : hachures. La lettre de formation (déjà portée par la légende et les étiquettes de carte) joue le rôle de repère non coloré ; les hachures alourdiraient la figure. À reprendre si la relecture en salle le demande.
+- **Limite** : les ΔE sont une simulation ; seuil 10 = règle empirique, pas une mesure sur projecteur réel.
+
+### WP6 — Couche enseignant : réalisé (2026-10-22) — *brouillon automatique, à relire*
+- La vue présentateur affiche le **malentendu dominant** (mauvaise réponse la plus choisie, avec sa correction), en plus du conseil par bande de Mazur déjà présent ; la carte « Notes » porte la mention « brouillon automatique — à relire par un géologue » pour les leçons concernées. Les 27 notes/questions de géologie existaient déjà ; elles restent à relire.
+- `tests/teacher.test.js` : note + question pour chaque scène, textes de chaque malentendu.
+
+### WP7 — Audit et livraison : réalisé (2026-10-22)
+- `tools/stage/audit_geology.mjs` (`npm run audit:geology`) : serveur local intégré + porte de projection sur géologie et préalable ; `--quick` pour 2 formats × 3 échelles. Pas ajouté à la CI (Playwright n'est pas une dépendance du dépôt).
+- Cache du service worker renommé (`geocarto-v4-stage4-v31`), `dist/app.js` reconstruit, README et `docs/ENGINES.md` mis à jour.
