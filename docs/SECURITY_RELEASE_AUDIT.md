@@ -1,6 +1,8 @@
 # GéoCarto v3.1.0-rc.2 — audit de sécurité et de diffusion
 
-> Version 1.0 · 2026-10-26 · audit **statique et local** du dépôt `SofyanSbahi/GEOCARTO` (branche `main` = rc.2). Aucune action n'a été faite sur GitHub (réglages, accès) ; ce qui n'a pas pu être vérifié est signalé « non vérifié ».
+> Version 1.1 · 2026-10-26 · **suite : mesures appliquées dans rc.3, voir § 10.**
+>
+> (Version 1.0 · 2026-10-26) · audit **statique et local** du dépôt `SofyanSbahi/GEOCARTO` (branche `main` = rc.2). Aucune action n'a été faite sur GitHub (réglages, accès) ; ce qui n'a pas pu être vérifié est signalé « non vérifié ».
 > **Objectif de Sofyan** : partager GéoCarto avec des collègues et des étudiants **par un lien**, sans leur donner le code source et sans qu'ils puissent le modifier.
 
 ## 1. Réponse courte
@@ -19,7 +21,7 @@
 | # | Gravité | Constat | Preuve | Recommandation |
 |---|---|---|---|---|
 | F1 | **Élevée** | **Publier la racine du dépôt (réglage GitHub Pages par défaut) exposerait tout le code source** : `js/` (96 fichiers non minifiés), `tests/`, `docs/`, `tools/`, `README.md` (avec le code enseignant), `package*.json`. `dist/app.js` n'est pas le seul fichier servi. | `git ls-files` : 96 js, 68 tests, 24 docs, 8 tools ; le dépôt contient aussi `.nojekyll`, donc rien n'est filtré. | Publier **uniquement `site/`** (§ 6). Testé : l'application fonctionne depuis `site/` seul (porte de projection : 136 écrans, 0 défaut ; 0 requête en erreur ; `js/main.js` → 404). |
-| F2 | **Élevée** | **Le code enseignant est écrit en clair dans `README.md`, dans `docs/RAPPORT_PHASE2.md` et dans l'historique Git depuis le tout premier dépôt (commit `ec1840d`)** ; son empreinte SHA-256 **non salée** est dans `config.js` (public). L'empreinte du code documenté correspond bien (vérifié). | `git log -S"Atlas-K7Q2"` ; `sha256("…") = 9f7fee11…` = `config.js`. | **Changer le code**, ne jamais l'écrire dans un document ; le choisir long (≥ 12 caractères, phrase) car l'empreinte non salée est attaquable hors ligne. Retirer le code du README et du rapport (l'historique restera lisible par quiconque a accès au dépôt privé : d'où le changement de code). |
+| F2 | **Élevée** | **Le code enseignant est écrit en clair dans `README.md`, dans `docs/RAPPORT_PHASE2.md` et dans l'historique Git depuis le tout premier dépôt (commit `ec1840d`)** ; son empreinte SHA-256 **non salée** est dans `config.js` (public). L'empreinte du code documenté correspond bien (vérifié). | Historique Git (premier commit) ; l'empreinte du code documenté correspondait à `config.js`. | **Changer le code**, ne jamais l'écrire dans un document ; le choisir long (≥ 12 caractères, phrase) car l'empreinte non salée est attaquable hors ligne. Retirer le code du README et du rapport (l'historique restera lisible par quiconque a accès au dépôt privé : d'où le changement de code). |
 | F3 | **Moyenne** | **L'espace enseignant est contournable en une ligne** (`sessionStorage.setItem('gc_teacher','1')`) ; il donne accès au tableau de classe local, à la création de devoirs et à l'**aperçu des exercices avec corrigés**. | Reproduit (Chromium) : espace atteint sans code. | Le code est *dissuasif*, comme le dit déjà `prof.js`. **Aucun corrigé ne peut être caché dans une application statique** : les générateurs d'exercices calculent les réponses dans le navigateur. Si l'intégrité d'une évaluation compte, la faire **hors outil** (papier, plateforme de l'université). |
 | F4 | **Moyenne** | **Injection (XSS stockée) par le nom d'un élève** : le tableau de classe écrit `r.name` sans l'échapper ; un rapport d'élève importé avec un nom piégé exécute du script dans le navigateur de l'enseignant (reproduit). Portée limitée : aucun serveur, aucune donnée centrale ; le script peut lire le `localStorage` de l'application (tableau de classe) et se faire passer pour l'enseignant. | Reproduit : `<img onerror=…>` exécuté. | Échapper `r.name`, `r.cls` (et le champ « Prénom / pseudo » de `portfolio.js`) ; ajouter un test. **Correctif non appliqué** : rc.2 est figée pour l'essai en classe ; à intégrer dans une rc.3 si vous le décidez. |
 | F5 | **Moyenne** | **Aucune politique de sécurité de contenu (CSP)** ; scripts en ligne dans `index.html`. GitHub Pages ne permet pas d'envoyer d'en-têtes. | `index.html` : pas de `<meta http-equiv="Content-Security-Policy">`. | Ajouter une CSP par `<meta>` (`default-src 'self'; img-src 'self' data:`) après essai ; hébergement avec en-têtes (Cloudflare) pour plus de contrôle. À tester avec la porte avant diffusion. |
@@ -91,3 +93,13 @@
 
 ## 9. Limites de cet audit
 Audit statique du dépôt et essais locaux ; pas de test d'intrusion sur un site déployé (il n'y en a pas : `has_pages: false`) ; réglages GitHub non lus ; modèle de menace : étudiants et collègues curieux, pas un attaquant ciblé. Les informations sur les offres (GitHub, Cloudflare) viennent de la documentation consultée aujourd'hui et sont à reconfirmer.
+
+## 10. Suite : mesures de la rc.3 (2026-10-26)
+| Constat | Mesure | État |
+|---|---|---|
+| F1 publication de la racine | `tools/make-site.sh` + workflow manuel `.github/workflows/pages.yml` (publie **`site/` seulement**, refuse tout fichier source) ; test `tests/security.test.js` | Fait ; **réglage Pages à faire par Sofyan** |
+| F2 code enseignant | **Nouvelle phrase secrète** (empreinte dans `config.js`), ancien code retiré du README, du rapport de phase 2 et de cet audit ; l'ancien code reste dans l'historique Git mais **n'est plus valide** | Fait ; **Sofyan doit conserver la nouvelle phrase** |
+| F4 injection (XSS) | `esc()` appliqué à tout champ d'élève, de rapport importé, de devoir importé et de stockage local (tableau de classe, défi, portfolio) ; **export CSV neutralisé** contre l'injection de formule ; tests | Fait |
+| F7 / F9 droits | `site/COPYRIGHT.txt`, `site/CREDITS.txt`, `docs/IMAGE_SOURCES.md` (inventaire des 15 images : **plusieurs sont des captures Google Maps/Earth ou des extraits de cartes officielles**, sources à confirmer) ; `noindex` pour ne pas référencer le lien | Fait pour l'avis ; **sources réelles à documenter par Sofyan** |
+| F3 contournement du code | Inchangé (limite technique d'un site statique, déjà signalée dans l'application) | Accepté |
+| F5 CSP | **Non fait** (hors périmètre rc.3 : risque de changer le comportement ; à évaluer avec un hébergement qui envoie des en-têtes) | Différé |

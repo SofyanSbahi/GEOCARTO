@@ -1,0 +1,13 @@
+GéoCarto — Crédits des illustrations
+
+Les leçons du module « Cours » contiennent 15 illustrations (dossier img/). Il s'agit de documents pédagogiques reproduits à
+des fins d'enseignement : captures d'écran de services de cartographie en ligne (Google Maps / Google Earth, dont les marques
+sont visibles sur les images), extraits de cartes topographiques officielles, photographies de paysages et schémas
+(projections, coordonnées, boussole, courbes de niveau).
+
+Les droits sur ces documents appartiennent à leurs auteurs et éditeurs respectifs ; leur reproduction ici ne vaut pas cession
+de droits. Les sources précises et les autorisations sont en cours de vérification par l'auteur de GéoCarto. Si vous détenez
+des droits sur l'une de ces illustrations et souhaitez une mention ou un retrait, contactez l'auteur : Sofyan Sbahi.
+
+Les figures des leçons Stage (cartes, coupes, profils, schémas) sont générées par le logiciel et ne reprennent aucune image
+tierce.

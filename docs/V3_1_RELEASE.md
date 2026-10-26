@@ -1,6 +1,6 @@
 # GéoCarto v3.1 — candidat à la livraison (RC1) et liste de contrôle
 
-> Version 1.1 · 2026-10-26 · `3.1.0-rc.2` (RC2 = RC1 + finition de projection des leçons de topographie, voir § 7). Contenu pédagogique rédigé par la machine : **brouillon à relire par un géologue** (porte de livraison G3 ci-dessous).
+> Version 1.2 · 2026-10-26 · `3.1.0-rc.3` (rc.3 = rc.2 + sécurité et publication, § 8 ; interface identique). Précédemment `3.1.0-rc.2` (RC2 = RC1 + finition de projection des leçons de topographie, voir § 7). Contenu pédagogique rédigé par la machine : **brouillon à relire par un géologue** (porte de livraison G3 ci-dessous).
 
 ## 1. Ce que contient la RC1
 Leçons Stage « Cartes géologiques » (15 scènes), « Coupes géologiques » (12 scènes) et préalable « Lire le relief » (3 votes) ; votes mélangés ; fil du raisonnement ; options figurées ; palette de projection ; vue présentateur avec malentendu dominant ; outil d'audit `npm run audit:geology`. Détail : [V3_1_REVIEW.md](V3_1_REVIEW.md), plan et journal : [V3_1_PLAN.md](V3_1_PLAN.md).
@@ -35,7 +35,7 @@ Ne fusionner #1 que si la CI est verte (elle teste `dist/app.js` reproductible).
 3. [ ] **Changer le code enseignant** (M6), vérifier qu'il n'apparaît dans aucun document partagé ; décider d'une licence (code : MIT/Apache ; contenu : CC-BY, après vérification des droits des figures).
 4. [ ] G3 : un relecteur nommé signe `docs/V3_1_REVIEW.md` §1 (date, nom, corrections). Retirer ou conserver la mention « brouillon automatique » selon son avis.
 5. [ ] G4 et G5 dans la salle.
-6. [ ] Passer `package.json` de `3.1.0-rc.2` à `3.1.0` ; étiqueter `v3.1.0` ; notes de version = résumé de la revue.
+6. [ ] Passer `package.json` de `3.1.0-rc.3` à `3.1.0` ; étiqueter `v3.1.0` ; notes de version = résumé de la revue.
 7. [ ] Activer GitHub Pages sur `main` (racine) ; ouvrir l'URL publique en navigation privée ; vérifier `#/stage/prereq`, `#/stage/geocarte`, `#/stage/coupe`, `#/stage/fil`.
 8. [ ] Sauvegarde : archive du dépôt (ou bundle) + export Zenodo si le contenu est ouvert (DOI).
 9. [ ] Ouvrir les tickets « v3.2 » issus de la revue (relecture, essai instrumenté, D « Histoire d'une carte », dette F7/F9, audit en CI).
@@ -58,3 +58,10 @@ Aucune fonction nouvelle (la v3.2 attend l'essai en classe) ; uniquement des dé
 - *Préalable « Lire le relief »*, vote 2 : flèche P → Q horizontale et deux fois plus longue.
 - Outil : `--all` (liste complète des défauts) pour la porte et `audit:geology`.
 
+## 8. rc.3 — sécurité, publication, préparation de la classe (2026-10-26)
+**Aucune fonction pédagogique ni changement d'interface** : `js/stage/` et `css/` identiques à rc.2 ; l'essai en classe reste comparable. Détail : [SECURITY_RELEASE_AUDIT.md](SECURITY_RELEASE_AUDIT.md) § 10.
+- **Code enseignant** remplacé par une phrase secrète longue (empreinte seule dans `config.js` ; la phrase n'est écrite dans aucun fichier du dépôt) ; ancien code retiré des documents et **invalide**.
+- **Injection (XSS)** corrigée : `esc()` sur toutes les données d'élèves, rapports et devoirs importés, stockage local (tableau de classe, défi, portfolio) ; **export CSV** protégé contre l'injection de formule. Vérifié dans Chromium (charges piégées affichées comme texte, nom « O'Brien » intact).
+- **Droits** : `COPYRIGHT.txt`, `CREDITS.txt` (illustrations tierces : droits à leurs détenteurs, vérification en cours), `THIRD-PARTY-LICENSES.txt` publiés avec le site ; inventaire `docs/IMAGE_SOURCES.md` ; balises `robots noindex` + `robots.txt`.
+- **Publication** : seul `site/` est publié (`tools/make-site.sh`), par le workflow **manuel** `.github/workflows/pages.yml` (tests, build reproductible, contrôle « aucun fichier source » avant publication).
+- **Mesures** : 185 tests ; porte de projection depuis `site/` : 10 leçons, 0 défaut ; `js/`, `README.md`, `docs/` → 404 sur le site.
