@@ -9,7 +9,7 @@
      · L5        figure ≥ 50 % de la hauteur d'écran (≥ 45 % en 4:3 / 5:4) sur tout écran de vote, à toute échelle de salle.
      · L1        légende ≥ 4,2 % de la hauteur d'écran ; compteur de votes ≥ 3,8 % ; chiffres du minuteur ≥ 5 %.
    Usage : python3 -m http.server 8765  (à la racine du dépôt)  puis  node tools/stage/stage_gate.mjs [--url http://localhost:8765/index.html]
-           [--lessons geocarte,coupe] [--rs 0.8,1,1.5,2.5] [--views 1920x1080,1024x768] [--quick]
+           [--lessons geocarte,coupe] [--rs 0.8,1,1.5,2.5] [--views 1920x1080,1024x768] [--quick] [--all : liste complète des défauts]
    Playwright : doit être résolvable (npm i -D playwright, ou NODE_PATH / PLAYWRIGHT_PATH vers un dossier node_modules). CHROMIUM_PATH : navigateur à utiliser.
    Code de retour ≠ 0 s'il y a un défaut. */
 import { createRequire } from 'node:module';
@@ -138,6 +138,7 @@ if (fails.length) {
   for (const f of fails) { const m = f.match(/^(.*?) · (\S+) : (\S+(?: \S+){0,3})/); const key = `${m[1]} · ${m[3]}`; const g = groups.get(key) || { n: 0, ex: [] }; g.n++; if (g.ex.length < 3) g.ex.push(m[2]); groups.set(key, g); }
   console.log('\nDÉFAUTS (' + fails.length + ') par format · échelle · type :');
   for (const [k, g] of groups) console.log(`  ${String(g.n).padStart(3)} × ${k}   ex. ${g.ex.join(', ')}`);
+  if (process.argv.includes('--all')) { console.log('\nLISTE COMPLÈTE :'); fails.forEach(f => console.log('  ' + f)); }
   process.exit(1);
 }
 console.log('\nRÉSULTAT : OK');

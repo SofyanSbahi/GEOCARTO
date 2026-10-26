@@ -13,7 +13,9 @@ import { top } from './geomap.js';
 const { C, txt, line, rect, circ, path, arrow, at, tag } = K;
 
 const cache = new Map();
-const dem = f => { if (!cache.has(f)) cache.set(f, demFromForm(f, { base: 200, relief: 400, slope: 1, scaleN: 25000 })); return cache.get(f); };
+/* colline adoucie (pente .6) : les courbes 500 et 300 sont deux fois plus écartées, la flèche P → Q du vote 2 devient lisible au dernier rang */
+const SLOPE = { colline: .6 };
+const dem = f => { if (!cache.has(f)) cache.set(f, demFromForm(f, { base: 200, relief: 400, slope: SLOPE[f] || 1, scaleN: 25000 })); return cache.get(f); };
 const BOX = { x: 4, y: 19, w: 82, h: 46.4 };                     // x ≤ 86 : les cartes d'options occupent x ≥ 90 ; y ≥ 19 : la question (2 lignes) reste au-dessus de la carte
 const EQ = 100;                                                   // équidistance large : 4 à 5 courbes seulement, chacune lisible depuis le dernier rang
 
@@ -26,7 +28,7 @@ const at_ = (ch, f) => { for (let k = 0; k < ch.length; k++) { const q = ch[(Mat
 function contourMap(d, labelled) {
   let thin = '', thick = '', labs = '';
   for (const lv of levelPaths(d, EQ, BOX)) (lv.level % 100 === 0 ? (thick += lv.d) : (thin += lv.d));
-  for (const [z, f = .5] of labelled.map(l => [].concat(l))) { const ch = chainOf(d, z); if (ch) { const q = at_(ch, f); labs += txt(q[0], q[1], String(z), { size: 3.8, w: 800 }); } }
+  for (const [z, f = .5] of labelled.map(l => [].concat(l))) { const ch = chainOf(d, z); if (ch) { const q = typeof f === 'function' ? f(ch) : at_(ch, f); labs += txt(q[0], q[1], String(z), { size: 3.8, w: 800 }); } }
   return fillBox(BOX) + path(thin, { stroke: '#a9692f', w: .32 }) + path(thick, { stroke: '#5a2a08', w: .7 }) + labs;
 }
 /* `dir` (vecteur unitaire) : l'étiquette est posée de ce côté du point, pour ne jamais couvrir la flèche qui relie P à Q */
@@ -35,10 +37,13 @@ const dot = (q, label, dir = [1, -.6], fill = C.acc) => circ(q[0], q[1], 1.9, { 
 /* ---------- figures des trois votes (calculées, pas dessinées à la main) ---------- */
 const fig1 = () => { const d = dem('colline'), ch = chainOf(d, 400), P = at_(ch, .22), Q = at_(ch, .68); return { P, Q, zP: 400, zQ: 400, svg: contourMap(d, [300, 400, 500]) + dot(P, 'P') + dot(Q, 'Q') }; };
 const fig2 = () => {
-  const d = dem('colline'), hi = chainOf(d, 500), lo = chainOf(d, 300), P = at_(hi, .25);
-  const Q = lo.reduce((m, q) => inside(q) && (!m || Math.hypot(q[0] - P[0], q[1] - P[1]) < Math.hypot(m[0] - P[0], m[1] - P[1])) ? q : m, null);
+  /* P = bord ouest de la courbe 500, Q = point de la courbe 300 à la même hauteur vers l'ouest : flèche horizontale, longue, qui croise 400 ;
+     altitudes écrites à l'est et au sud, loin de la flèche et jamais alignées ; étiquettes P et Q au-dessus des points */
+  const d = dem('colline'), hi = chainOf(d, 500), lo = chainOf(d, 300), P = hi.filter(inside).reduce((m, q) => !m || q[0] < m[0] ? q : m, null);
+  const Q = lo.filter(q => inside(q) && q[0] < P[0]).reduce((m, q) => !m || Math.abs(q[1] - P[1]) < Math.abs(m[1] - P[1]) ? q : m, null);
+  const ext = (k, sg) => ch => ch.filter(inside).reduce((m, q) => !m || sg * q[k] > sg * m[k] ? q : m, null), east = ext(0, 1), south = ext(1, 1);
   const ang = Math.atan2(Q[1] - P[1], Q[0] - P[0]), u = [Math.cos(ang), Math.sin(ang)], a = [P[0] + u[0] * 2.4, P[1] + u[1] * 2.4], b = [Q[0] - u[0] * 2.4, Q[1] - u[1] * 2.4];
-  return { P, Q, zP: 500, zQ: 300, svg: contourMap(d, [500, 400, 300]) + arrow(a[0], a[1], b[0], b[1], { c: '#fff', w: 3.4, head: 5.6 }) + arrow(a[0], a[1], b[0], b[1], { c: C.ink, w: 1.5, head: 4.2 }) + dot(P, 'P', [-u[0], -u[1]]) + dot(Q, 'Q', u) };
+  return { P, Q, zP: 500, zQ: 300, svg: contourMap(d, [[500, east], [400, south], [300, east]]) + arrow(a[0], a[1], b[0], b[1], { c: '#fff', w: 3.4, head: 5.6 }) + arrow(a[0], a[1], b[0], b[1], { c: C.ink, w: 1.5, head: 4.2 }) + dot(P, 'P', [0, -1]) + dot(Q, 'Q', [0, -1]) };
 };
 /* le sommet d'un V : dans la vallée de démonstration l'axe monte vers le haut de la figure ; la courbe 300 est un V unique, sa pointe est son point le plus haut */
 const fig3 = () => {

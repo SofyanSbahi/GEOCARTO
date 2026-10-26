@@ -110,3 +110,16 @@ test('SEC : à l\'échelle 1 en 16:9, le bas de la coupe ne touche plus le bande
   K.room(1, 16 / 9); const r = rectOf(callout(80, 61, 'x'.repeat(60), { w: 122, lines: 2, size: 5.4, maxH: 24 }));
   assert.ok(SEC.y + SEC.h <= r.y - .4, `coupe jusqu'à ${(SEC.y + SEC.h).toFixed(1)}, bandeau dès ${r.y.toFixed(1)}`);
 });
+
+/* v3.1 (finition) — une étiquette « tagFit » ne dépasse jamais sa largeur, même au pire cas (salle ×2,5, écran 4:3) ; sinon le titre d'un vote
+   passait sous les cartes d'options (Relief, vote 1). */
+test('tagFit : largeur bornée au pire cas de salle et de format, taille jamais sous MIN', () => {
+  const width = svg => +svg.match(/width="([\d.]+)"/)[1];
+  try {
+    for (const [rs, aspect] of [[1, 16 / 9], [2.5, 16 / 9], [2.5, 4 / 3]]) {
+      K.room(rs, aspect);
+      for (const s of ['La courbe rouge relie…', 'Valeurs : 250 puis 500', 'Azimut A→B = 70°']) assert.ok(width(K.tagFit(47, 4, s, 84, { size: 4.4 })) <= 84 + 1e-6, `${s} à ×${rs}, ${aspect.toFixed(2)}`);
+      assert.match(K.tagFit(47, 4, 'x'.repeat(60), 84, { size: 4.4 }), /<rect/);   // texte trop long : on garde MIN (lisibilité) — c'est au texte de raccourcir
+    }
+  } finally { K.room(1, 16 / 9); }
+});

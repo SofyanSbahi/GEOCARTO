@@ -17,22 +17,24 @@ export const pente = {
       } },
     { id: 'tri', kind: 'show', steps: 4, min: 3, param: { values: [10, 25, 50, 100], start: 2, label: (v, i, X) => 'H = ' + v + ' m' },
       fig: (st, H, X) => {
-        const D = 200, w = 90, h = H / D * w, x0 = 12, y0 = 58, p = H / D * 100;
-        let o = line(x0, y0, x0 + w, y0, { c: C.ink, w: .9 }) + txt(x0 + w / 2, y0 + 5.6, 'D = 200 m', { size: 5.2, w: 800 });
+        const D = 200, w = 90, h = H / D * w, x0 = 12, y0 = 56, p = H / D * 100;
+        let o = line(x0, y0, x0 + w, y0, { c: C.ink, w: .9 }) + txt(x0 + w * .7, y0 + 5.6, 'D = 200 m', { size: 5.2, w: 800 });   /* D à droite : l'angle s'inscrit sous le sommet, à gauche */
         o += at(st, 1, tri(x0, y0, w, h) + line(x0 + w, y0, x0 + w, y0 - h, { c: C.acc, w: 1.3 }) + txt(x0 + w + 2, y0 - h / 2, 'H = ' + H + ' m', { size: 5.2, anchor: 'start', fill: C.acc, w: 800 }));
         o += at(st, 2, rect(5, 4, 47, 32, { fill: C.soft, rx: 2 }) + txt(28.5, 10.4, 'p = H ÷ D × 100', { size: 4.2, w: 800 }) + txt(28.5, 18.6, `${H} ÷ 200 × 100`, { size: 4.4, w: 600 }) + txt(28.5, 29, '= ' + X.nf(p, 1) + ' %', { size: 8, fill: C.acc, w: 800 }));
-        o += at(st, 3, path(`M${x0 + 14} ${y0}A14 14 0 0 0 ${x0 + 14 - 14 * (1 - Math.cos(Math.atan(h / w)))} ${y0 - 14 * Math.sin(Math.atan(h / w))}`, { stroke: C.blue, w: .9 }) + tag(x0 + 23, y0 - 5, '≈ ' + X.nf(deg(p), 1) + '°', { size: 4.6, fill: C.blue }));
+        o += at(st, 3, path(`M${x0 + 14} ${y0}A14 14 0 0 0 ${x0 + 14 - 14 * (1 - Math.cos(Math.atan(h / w)))} ${y0 - 14 * Math.sin(Math.atan(h / w))}`, { stroke: C.blue, w: .9 }) + tag(x0 + 14, y0 + 1.5 + 4.6 * K.fsz() * .75, '≈ ' + X.nf(deg(p), 1) + '°', { size: 4.6, fill: C.blue }));
         return o;
       } },
     { id: 'fan', kind: 'show', steps: 4, min: 2,
       fig: (st, p, X) => {
         const O = [10, 62], rows = [[10, C.green], [50, C.blue], [100, C.brown], [200, C.red]];
-        let o = line(O[0], O[1], 150, O[1], { c: C.ink, w: .8 });
+        /* étiquettes en colonne à droite des extrémités (la plus raide en haut), point de couleur au bout de chaque droite : aucune ne se chevauche, même agrandie */
+        const fs = K.fsz(), th = 4.6 * fs * 1.5, dy = th + 1.2, yb = Math.max(36, 2 + 4 * dy + 1);
+        let o = line(O[0], O[1], 110, O[1], { c: C.ink, w: .8 });
         rows.forEach(([pc, col], i) => {
           const a = Math.atan(pc / 100), L = [100, 90, 70, 44][i], x = O[0] + L * Math.cos(a), y = O[1] - L * Math.sin(a);
-          o += at(st, i, line(O[0], O[1], x, y, { c: col, w: 1.2 }) + tag(x + 2, y + (i === 3 ? 0 : -1), `${pc} % = ${X.nf(deg(pc), 1)}°`, { size: 4.6, fill: col, anchor: 'start' }), { rest: true });
+          o += at(st, i, line(O[0], O[1], x, y, { c: col, w: 1.2 }) + circ(x, y, 1.4, { fill: col }) + tag(112, 2 + th / 2 + (3 - i) * dy, `${pc} % = ${X.nf(deg(pc), 1)}°`, { size: 4.6, fill: col, anchor: 'start' }), { rest: true });
         });
-        o += at(st, 2, rect(110, 36, 46, 14, { fill: '#fff6d6', stroke: C.ink, w: .6, rx: 2 }) + txt(133, 43, X.t('pente.not'), { size: 4.4, w: 800 }));
+        o += at(st, 2, rect(112, yb, 46, 14, { fill: '#fff6d6', stroke: C.ink, w: .6, rx: 2 }) + txt(135, yb + 7, X.t('pente.not'), { size: Math.max(3.4, Math.min(4.4, 42 / (12 * .6 * fs))), w: 800 }));
         return o;
       } },
     { id: 'v1', kind: 'vote', min: 2,

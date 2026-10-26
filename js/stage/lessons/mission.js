@@ -75,7 +75,8 @@ export const prologue = {
         o += at(st, 4, st === 4 ? txt(M.a[0], M.a[1] + 8.4, '? m', { size: 5, w: 800, fill: C.acc }) + txt(M.b[0], M.b[1] - 8.4, '? m', { size: 5, w: 800, fill: C.acc }) : '');
         o += at(st, 5, st === 5 ? txt(mid[0], mid[1] - 4.4, '? %', { size: 5.4, w: 800, fill: C.acc }) : '');
         o += at(st, 6, st === 6 ? path(`M${M.a[0]} ${M.a[1]}L${M.b[0]} ${M.b[1]}`, { stroke: C.acc, w: 2 }) : '');
-        QS.forEach((q, i) => { const y = 10 + i * 9.4, cur = st === i + 1; o += cur ? tag(108, y, `${i + 1} ${X.t('mission.k.' + q)}`, { size: 4.6, fill: C.pri, anchor: 'start' }) : txt(108, y, `${i + 1} ${X.t('mission.k.' + q)}`, { size: 4.2, w: 700, anchor: 'start', fill: st > i + 1 ? C.mute : C.ink }); });
+        const dy = Math.max(9.4, 5.4 * K.fsz() + 1);   /* interligne ≥ demi-pastille + demi-ligne voisine, à toute échelle de salle */
+        QS.forEach((q, i) => { const y = 10 + i * dy, cur = st === i + 1; o += cur ? tag(108, y, `${i + 1} ${X.t('mission.k.' + q)}`, { size: 4.6, fill: C.pri, anchor: 'start' }) : txt(108, y, `${i + 1} ${X.t('mission.k.' + q)}`, { size: 4.2, w: 700, anchor: 'start', fill: st > i + 1 ? C.mute : C.ink }); });
         return o;
       } },
     { id: 'recap', kind: 'recap', steps: 3, min: 1,
