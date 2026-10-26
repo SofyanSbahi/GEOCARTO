@@ -62,7 +62,7 @@ export const profil = {
         const c = X.ctx, mp = toMap(MAP_BIG, c.d), a = mp(c.A), b = mp(c.B);
         let o = mapSvg(c.d, c.eq, MAP_BIG);
         o += at(st, 1, line(a[0], a[1], b[0], b[1], { c: C.acc, w: 1.1 }) + badge(a[0], a[1], 'A', { r: 2.8, fill: C.acc }) + badge(b[0], b[1], 'B', { r: 2.8, fill: C.acc }));
-        o += at(st, 2, [[X.t('profil.chip.eq', { e: c.eq }), 14], [X.t('profil.chip.len', { d: dist(c.L, X.nf) }), 28], [X.t('profil.chip.code'), 44], [c.code, 52]].map(([s, y], i) => i === 3 ? tag(133, y, s, { size: 4.6, fill: C.ink }) : txt(133, y, s, { size: i === 2 ? 3.8 : 5, w: 800, fill: i === 2 ? C.mute : C.ink })).join(''));
+        o += at(st, 2, [[X.t('profil.chip.eq', { e: c.eq }), 14], [X.t('profil.chip.len', { d: dist(c.L, X.nf) }), 28], [X.t('profil.chip.code'), 44], [c.code, 44 + 5.8 * K.fsz() + .8]].map(([s, y], i) => i === 3 ? tag(133, y, s, { size: 4.6, fill: C.ink }) : txt(133, y, s, { size: i === 2 ? 3.8 : 5, w: 800, fill: i === 2 ? C.mute : C.ink })).join(''));
         return o;
       } },
     { id: 'survey', kind: 'show', steps: 3, min: 3,
@@ -123,7 +123,7 @@ export const profil = {
         const c = X.ctx;
         if (st < 2) { const mp = toMap(MAP_BIG, c.d), a = mp(c.A), b = mp(c.B);
           return mapSvg(c.d, c.eq, MAP_BIG) + line(a[0], a[1], b[0], b[1], { c: C.acc, w: 1.1 }) + badge(a[0], a[1], 'A', { r: 2.8, fill: C.acc }) + badge(b[0], b[1], 'B', { r: 2.8, fill: C.acc }) +
-            txt(133, 12, X.t('profil.chip.code'), { size: 3.8, w: 800, fill: C.mute }) + tag(133, 19, c.code, { size: 4.6, fill: C.ink }) + txt(133, 33, X.t('profil.pr.hz'), { size: 4.2, w: 800 }) + txt(133, 40, `1 cm = ${X.nf(c.hs)} m`, { size: 4.6, w: 800 }) + txt(133, 49, X.t('profil.pr.vt'), { size: 4.2, w: 800 }) + txt(133, 56, `Ev × ${c.ev0}`, { size: 4.8, w: 800, fill: C.acc }); }
+            txt(133, 12, X.t('profil.chip.code'), { size: 3.8, w: 800, fill: C.mute }) + tag(133, 12 + 5.8 * K.fsz() + .8, c.code, { size: 4.6, fill: C.ink })   /* sous son intitulé, à toute échelle */ + txt(133, 33, X.t('profil.pr.hz'), { size: 4.2, w: 800 }) + txt(133, 40, `1 cm = ${X.nf(c.hs)} m`, { size: 4.6, w: 800 }) + txt(133, 49, X.t('profil.pr.vt'), { size: 4.2, w: 800 }) + txt(133, 56, `Ev × ${c.ev0}`, { size: 4.8, w: 800, fill: C.acc }); }
         const F = frame(c), n = c.cross.length, zi = c.seq.reduce((m, q) => q.z > m.z ? q : m, c.seq[0]), pts = c.seq.map(q => ({ s: q.s, z: q.z })), all = [...pts, ...c.dups.map(d => ({ s: d.s, z: d.est }))];
         return axes(c, F, X) + strip(c, F, n) + pts.map(q => circ(F.X(q.s), F.Y(q.z), 1.3, { fill: C.ink })).join('') + c.dups.map(d => circ(F.X(d.s), F.Y(d.est), 1.6, { fill: C.green })).join('') + K.el('g', { class: 'st-r enter' }, smoothPath(all, F, c, { stroke: C.green, w: 1.1, draw: true, cls: 'st-draw' })) +
           path('M' + c.P.filter((_, i) => i % 3 === 0).map(q => `${F.X(q.s).toFixed(1)} ${F.Y(q.z).toFixed(1)}`).join('L'), { stroke: C.mute, w: .45, dash: '1.2 1.4' }) + tag(zi.s < c.L / 2 ? 118 : 52, 26.5, X.t('profil.pr.truth'), { size: 3.8, fill: C.mute });

@@ -56,6 +56,8 @@ export const at = (st, k, inner, o = {}) => {
 export const spotlight = (st, k, cx, cy, r, o = {}) => st < k || (o.until != null && st > o.until) ? '' :
   el('path', { class: 'st-spot' + (st === k && K.fwd ? ' enter' : ''), d: `M0 0H${W}V${H}H0Z M${r2(cx + r)} ${r2(cy)}A${r2(r)} ${r2(r)} 0 1 0 ${r2(cx - r)} ${r2(cy)}A${r2(r)} ${r2(r)} 0 1 0 ${r2(cx + r)} ${r2(cy)}Z`, 'fill-rule': 'evenodd', fill: '#0c1116', opacity: o.op || .55 });
 /* détail secondaire : supprimé en amphithéâtre (le texte restant est plus grand, pas plus nombreux) */
+/* retire la classe « point focal » d'un fragment : un élément de contexte qui ne doit pas rivaliser avec les options d'un vote */
+export const quiet = inner => inner.replace(/\bclass="([^"]*)\bfp\b([^"]*)"/g, 'class="$1$2"');
 export const lo = inner => K.amphi || K.narrow ? '' : inner;
 /* pastille numérotée / lettrée */
 export const badge = (x, y, s, o = {}) => circ(x, y, o.r || 2.6, { fill: o.fill || C.pri, cls: o.quiet ? null : 'fp' }) + txt(x, y + .1, s, { size: o.size || 3.6, fill: '#fff', halo: false, w: 800 });
@@ -66,6 +68,8 @@ export function tag(x, y, s, o = {}) {
   const nx = Math.min(Math.max(x0, 1), Math.max(1, W - 1 - w)); x = x + (nx - x0); x0 = nx;
   return rect(x0, y - h / 2, w, h, { fill: o.fill || C.ink, rx: h * .28, op: o.op, cls: 'fp' }) + txt(ax === 'start' ? x + 1.5 : ax === 'end' ? x - 1.5 : x, y + .1, s, { size: o.size || 4, fill: o.color || '#fff', anchor: ax, halo: false, w: 800 });
 }
+/* étiquette d'une seule ligne qui ne dépasse jamais maxW unités : la taille baisse (jamais sous MIN) quand la salle ou le format l'agrandit */
+export const tagFit = (x, y, s, maxW, o = {}) => tag(x, y, s, { ...o, size: Math.max(MIN, Math.min(o.size || 4, (maxW - 4) / (String(s).length * .6 * K.fs))) });
 /* retour à la ligne glouton (n caractères max par ligne) */
 export const wrap = (s, n) => { const w = String(s).split(' '), out = []; let c = ''; for (const x of w) { if ((c + ' ' + x).trim().length > n && c) { out.push(c); c = x; } else c = (c + ' ' + x).trim(); } if (c) out.push(c); return out; };
 /* choisit la plus grande taille (≤ size0 × facteur de salle) pour laquelle `label` tient dans W unités sur ≤ maxLines lignes ; jamais sous MIN */
@@ -73,6 +77,38 @@ export function fit(label, W, size0, maxLines = 2) {
   for (let s = size0 * K.fs; s >= MIN - 1e-9; s -= .2) { const chars = Math.max(4, Math.floor(W / (s * .6))), lines = wrap(label, chars); if (lines.length <= maxLines && lines.every(l => l.length <= chars)) return { lines, size: s }; }
   return { lines: wrap(label, Math.floor(W / (MIN * .6))), size: MIN };
 }
+/* idem, mais le bloc doit aussi tenir dans une HAUTEUR H (unités logiques) : lignes × taille × interligne ≤ H. Sans cela, quand la salle ou le format
+   (4:3) agrandit le texte, il déborde de sa carte ou de son bandeau (audit v3.1 : « Sont verticaux » coupé, bulles recouvrant les schémas).
+   Retombe sur MIN, jamais en dessous. */
+export function fitBox(label, W, H, size0, maxLines = 2, lh = 1.16) {
+  for (let s = size0 * K.fs; s >= MIN - 1e-9; s -= .2) {
+    const chars = Math.max(4, Math.floor(W / (s * .6))), lines = wrap(label, chars);
+    if (lines.length <= maxLines && lines.every(l => l.length <= chars) && lines.length * s * lh <= H) return { lines, size: s };
+  }
+  return { lines: wrap(label, Math.floor(W / (MIN * .6))), size: MIN };
+}
+/* géométrie d'une étiquette `tag` (mêmes formules) et écartement vertical des étiquettes qui se chevauchent : items = [{ x, y, s, o }] → y corrigés
+   (même ordre). Ne bouge que le strict nécessaire ; au plus 6 passes. */
+export function tagBox(x, y, s, o = {}) {
+  const size = Math.max(MIN, o.size || 4) * K.fs, w = s.length * size * .6 + 4, h = size * 1.5, ax = o.anchor || 'middle';
+  return { x0: ax === 'start' ? x : ax === 'end' ? x - w : x - w / 2, y0: y - h / 2, w, h };
+}
+export function declutter(items, gap = .6) {
+  const ys = items.map(i => i.y), idx = items.map((_, i) => i).sort((a, b) => ys[a] - ys[b]);
+  for (let pass = 0; pass < 6; pass++) {
+    let moved = false;
+    for (let a = 0; a < idx.length; a++) for (let b = a + 1; b < idx.length; b++) {
+      const ia = idx[a], ib = idx[b], A = tagBox(items[ia].x, ys[ia], items[ia].s, items[ia].o), B = tagBox(items[ib].x, ys[ib], items[ib].s, items[ib].o);
+      const ox = Math.min(A.x0 + A.w, B.x0 + B.w) - Math.max(A.x0, B.x0), oy = Math.min(A.y0 + A.h, B.y0 + B.h) - Math.max(A.y0, B.y0);
+      if (ox > 0 && oy > -gap) { const push = (oy + gap) / 2, up = ys[ia] <= ys[ib]; ys[ia] += up ? -push : push; ys[ib] += up ? push : -push; moved = true; }
+    }
+    if (!moved) break;
+  }
+  return ys;
+}
+/* hauteur d'un bandeau d'énoncé à 2 lignes au bas d'une figure, à la taille de salle courante (5,4 u de base : 17 u à l'échelle 1).
+   Les schémas placés au-dessus doivent lui laisser cette place (voir SEC dans coupe.js). */
+export const calloutH = (lines = 2, size = 5.4) => lines * size * K.fs * 1.28 + 3.2;
 export const svgWrap = inner => `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img">${inner}</svg>`;
 
 /* échelle linéaire */

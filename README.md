@@ -37,7 +37,7 @@ Tout est stocké dans le navigateur (`localStorage`) : aucune donnée n'est envo
 
 ## Architecture v3 : moteurs, modèle pédagogique, expériences
 `js/engine/` contient les cinq moteurs (terrain, courbes, profil, géologie, pédagogie) : fonctions pures, testées sous Node, sans navigateur. Learning Mode (`pages/`, `widgets/`) et Stage Mode (`stage/`) sont deux **expériences** qui les appellent. Voir [docs/ENGINES.md](docs/ENGINES.md) et l'[ADR 0001](docs/adr/0001-engines-and-experiences.md).
-`npm test` lance la suite de tests (golden, contrat des moteurs, Stage ; 122 tests à la restauration du dépôt) ; `python3 tools/e2e/compare_legacy.py` compare l'application au code d'origine.
+`npm test` lance la suite de tests (golden, contrat des moteurs, Stage ; 180 tests à la livraison v3.1 ; 122 à la restauration) ; `python3 tools/e2e/compare_legacy.py` compare l'application au code d'origine.
 
 
 ## Stage v3 — système de cours
@@ -50,9 +50,13 @@ Leçons **Cartes géologiques** (`#/stage/geocarte`) et **Coupes géologiques** 
 Prérequis : Node.js ≥ 22. Le bundle `dist/app.js` est **reproductible** : esbuild est épinglé (0.28.2, `package-lock.json`).
 ```sh
 npm ci                # installe l'outillage exact
-npm test              # 122 tests (golden, contrat des moteurs, Stage)
+npm test              # 180 tests (golden, contrat des moteurs, Stage, palette, enseignant)
+npm run audit:geology # audit de projection sur rendu réel (Chromium + Playwright) : géologie, 4 formats × 4 échelles
 npm run build         # régénère dist/app.js depuis js/main.js
 npm run check:dist    # reconstruit et échoue si dist/app.js diffère du fichier versionné
 ```
 Règle : toute modification de `js/` ou de `vendor/` doit être livrée **avec** le `dist/app.js` régénéré (GitHub Pages sert `dist/` tel quel). L'intégration continue (`.github/workflows/ci.yml`) échoue si le bundle versionné ne correspond pas aux sources.
 Les références de non-régression sont dans `tests/golden/` ; `tests/legacy/` conserve le code d'origine pour les régénérer (`npm run golden`, uniquement pour figer un comportement voulu). Les scripts navigateur de `tools/` (Python + Playwright) s'exécutent contre un serveur local (`python3 -m http.server 8765`).
+
+## Version 3.1 (candidat à la livraison)
+Revue : [docs/V3_1_REVIEW.md](docs/V3_1_REVIEW.md) · liste de contrôle et ordre de fusion : [docs/V3_1_RELEASE.md](docs/V3_1_RELEASE.md) · essai en classe : [docs/V3_1_CLASSROOM_PROTOCOL.md](docs/V3_1_CLASSROOM_PROTOCOL.md).

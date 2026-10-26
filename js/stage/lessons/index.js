@@ -9,8 +9,9 @@ import { relief } from './relief.js';
 import { prologue } from './mission.js';
 import { geocarte } from './geologie.js';
 import { coupe } from './coupe.js';
+import { prereq } from './prereq.js';
 
-export const LESSONS = [prologue, echelle, orient, coord, relief, pente, profil, geocarte, coupe];
+export const LESSONS = [prologue, echelle, orient, coord, relief, pente, profil, geocarte, coupe, prereq];
 export const lessonById = id => LESSONS.find(l => l.id === id);
 export const TOPICS = [
   { n: 1, id: 'echelle' }, { n: 2, id: 'orient' }, { n: 3, id: 'coord' },

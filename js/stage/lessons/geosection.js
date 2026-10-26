@@ -3,6 +3,7 @@
    · contactPointsAlong : où la trace A→B coupe chaque contact en surface (le point de départ de toute construction)
    La construction de l'élève (droites au pendage apparent) est dessinée par-dessus, puis comparée à la coupe exacte. */
 import * as K from '../kit.js';
+import { projColor, projId } from '../palette.js';
 import { sectionGrid, sectionRegions, sectionContact, contactPointsAlong, labelPoint, profileAlong } from '../../engine/geology/index.js';
 const { C, txt, line, rect, circ, path, el } = K;
 
@@ -26,7 +27,7 @@ export function frame(S, box, ev = 1) {
 const f2 = n => Math.round(n * 100) / 100;
 const gridPt = (S, F) => p => [F.X(p[0] / (S.sec.ns - 1) * S.L), F.Z(S.sec.zt - (S.sec.zt - S.sec.zb) * p[1] / (S.sec.nz - 1))];
 const D = (chains, f) => chains.map(c => 'M' + c.pts.map(p => { const q = f(p); return f2(q[0]) + ' ' + f2(q[1]); }).join('L') + (c.closed ? 'Z' : '')).join('');
-export const unitColor = (S, u) => S.geo.units[u].c;
+export const unitColor = (S, u) => projColor(S.geo.units[u]);
 /* identifiant de clipPath déterministe (empreinte de la géométrie) : deux rendus identiques donnent le même SVG */
 const hash = str => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
 /* tout ce qui est dessiné dans `inner` est rogné à la boîte, et au-dessous du terrain si o.ground */
@@ -41,12 +42,12 @@ export const terrainPoly = (S, F) => terrainD(S, F) + `L${f2(F.X(S.L))} ${f2(F.b
 export function regionsSvg(S, F, o = {}) {
   const f = gridPt(S, F); let s = '';
   for (const r of S.R) {
-    const col = unitColor(S, r.u), a = ((o.dim && o.dim.has(r.u)) || (o.only != null && o.only !== r.u) ? .2 : 1) * (o.op == null ? 1 : o.op);
+    const col = unitColor(S, r.u), a = ((o.dim && o.dim.has(r.u)) || (o.only != null && o.only !== r.u) ? .4 : 1) * (o.op == null ? 1 : o.op);
     s += el('path', { d: D(r.chains, f), fill: col, 'fill-rule': 'evenodd', stroke: col, 'stroke-width': 1, opacity: a });
   }
   if (o.lines !== false) for (const r of S.R) s += el('path', { d: D(r.chains, f), fill: 'none', stroke: '#14181c', 'stroke-width': o.lineW || .45, 'stroke-linejoin': 'round', opacity: o.lineOp == null ? 1 : o.lineOp });
   const placed = [];
-  if (o.labels) for (const [u, p] of S.lab) { const q = f(p); if (q[1] < F.box.y + 2 || q[1] > F.box.y + F.box.h - 2 || placed.some(r => Math.abs(r[0] - q[0]) < 8 && Math.abs(r[1] - q[1]) < 5)) continue; placed.push(q); s += txt(q[0], q[1], S.geo.units[u].id, { size: o.labelSize || 4.4, w: 800 }); }
+  if (o.labels) for (const [u, p] of S.lab) { const q = f(p); if (q[1] < F.box.y + 2 || q[1] > F.box.y + F.box.h - 2 || placed.some(r => Math.abs(r[0] - q[0]) < 8 && Math.abs(r[1] - q[1]) < 5)) continue; placed.push(q); s += txt(q[0], q[1], projId(S.geo.units[u]), { size: o.labelSize || 4.4, w: 800 }); }
   return s;
 }
 /* tracé exact d'un contact u/v en coupe */
@@ -70,6 +71,21 @@ export function dipLine(F, c, a, sens = 1, o = {}) {
   const xEnd = sens > 0 ? B.x + B.w : B.x, yEnd = y0 + Math.abs(xEnd - x0) * t;
   const y1 = Math.min(yEnd, B.y + B.h), x1 = yEnd > B.y + B.h ? x0 + sens * (B.y + B.h - y0) / t : xEnd;
   return line(x0, y0, x1, y1, { c: o.c || C.ink, w: o.w || 1, dash: o.dash });
+}
+/* Petites coupes pour les OPTIONS d'un vote « galerie » : aucune étiquette (la lettre est ajoutée par le vote), traits ≥ 1,6 u, contraste maximal.
+   contactSection : la trace, ses points de contact, et les contacts prolongés selon la variante { angle, sense } (engine/geology/distractors.js) ;
+   structureSection : la coupe exacte colorée d'une structure. */
+/* profondeur des petites coupes d'options : à l'échelle vraie (angles conservés) une coupe est large et peu profonde ; sans profondeur les contacts n'ont pas la place
+   de se lire dans une case de 50 × 22 u (audit visuel du 22/10 : bandes plates en haut de la case). */
+export const MINI_DEPTH = .35;
+export const miniSectionOf = (ctx, A, B) => sectionOf(ctx, A, B, 260, 140, MINI_DEPTH);
+export function contactSection(S, box, v) {
+  const F = frame(S, box);
+  return groundFill(S, F) + stripSvg(S, F, { w: 2.4 }) + S.cps.map(c => dipLine(F, c, v.angle, v.sense, { c: C.ink, w: 1.15 })).join('') + contactDots(S, F, 1.3) + frameRect(F);
+}
+export function structureSection(S, box) {
+  const F = frame(S, box);
+  return groundFill(S, F) + clipped(S, F, regionsSvg(S, F, { lineW: .7 }), { ground: true }) + stripSvg(S, F, { w: 1.6 }) + frameRect(F);
 }
 /* le terrain : aplat clair sous la ligne de crête, puis le cadre */
 export const groundFill = (S, F, fill = '#f3ece0') => path(terrainPoly(S, F), { fill, stroke: null });

@@ -32,7 +32,7 @@ export const relief = {
         return o;
       } },
     { id: 'v-def', kind: 'vote', min: 2, vote: { opts: [{ ok: true }, { mis: 't-pente' }, { mis: 't-dist' }, { mis: 't-veg' }],
-      draw: (st, X) => { const d = dem('colline'), lv = levelPaths(d, 100, MID); return fillBox(MID) + lv.map(l => path(l.d, { stroke: l.level === 400 ? C.acc : C.brown, w: l.level === 400 ? 1.1 : .5 })).join('') + tag(47, 4, X.t('relief.v1.top'), { size: 4.4, fill: C.ink }); } } },
+      draw: (st, X) => { const d = dem('colline'), lv = levelPaths(d, 100, MID); return fillBox(MID) + lv.map(l => path(l.d, { stroke: l.level === 400 ? C.acc : C.brown, w: l.level === 400 ? 1.1 : .5 })).join('') + K.tagFit(47, 4, X.t('relief.v1.top'), 84, { size: 4.4, fill: C.ink }); } } },
     { id: 'eq', kind: 'show', min: 3, steps: 3, param: { values: [100, 50, 25, 10], start: 1, label: (v) => 'Éq ' + v + ' m' },
       fig: (st, eq, X) => {
         const d = dem('colline'), n = levelPaths(d, eq, BIG).length;
@@ -68,7 +68,7 @@ export const relief = {
         return o;
       } },
     { id: 'v-form', kind: 'vote', min: 2, vote: { opts: [{ mis: 't-fermee' }, { ok: true }, { mis: 't-col' }, { mis: 't-vallee' }],
-      draw: (st, X) => mapSvg(dem('cuvette'), 50, { x: 4, y: 8, w: 82, h: 56.4 }, { labels: true }) + tag(45, 4.4, X.t('relief.v4.top'), { size: 4.2, fill: C.ink }) } },
+      draw: (st, X) => mapSvg(dem('cuvette'), 50, { x: 4, y: 8, w: 82, h: 56.4 }, { labels: true }) + K.tagFit(45, 4.4, X.t('relief.v4.top'), 84, { size: 4.2, fill: C.ink }) } },
     { id: 'pr', kind: 'practice', min: 3, practice: { ch: 'courbes', seconds: 75 } },
     { id: 'recap', kind: 'recap', steps: 4, min: 1,
       fig: (st, p, X) => recapFig('relief', st, X) }
@@ -76,7 +76,7 @@ export const relief = {
 };
 export const FR = {
   'topic.4': 'Courbes de niveau', 'topic.5': 'Équidistance', 'topic.6': 'Points cotés', 'topic.8': 'Formes du relief',
-  'relief.side': 'vue de côté', 'relief.top': 'vue du dessus', 'relief.v1.top': 'Cette courbe rouge relie…', 'relief.eq.l': 'Équidistance', 'relief.eq.n': '{n} courbes', 'relief.eq.tr': 'Détail ↔ lisibilité',
+  'relief.side': 'vue de côté', 'relief.top': 'vue du dessus', 'relief.v1.top': 'La courbe rouge relie…', 'relief.eq.l': 'Équidistance', 'relief.eq.n': '{n} courbes', 'relief.eq.tr': 'Détail ↔ lisibilité',
   'relief.v2.top': 'Entre 340 m et 400 m', 'relief.v2.six': '6 intervalles', 'relief.pt': 'Point {n}', 'relief.spot.ratio': 'distance : {a} % du bas', 'relief.spot.exact': 'altitude exacte : {z} m',
   'relief.v3.top': 'P plus près de la courbe 350', 'relief.form.n': 'Forme {n} / {m}', 'relief.form.q': 'Quelle forme ?', 'relief.v4.top': 'Valeurs : 250 puis 500',
   'relief.form.colline': 'Colline', 'relief.form.cuvette': 'Cuvette', 'relief.form.col': 'Col', 'relief.form.vallee': 'Vallée', 'relief.form.crete': 'Crête',

@@ -4,15 +4,19 @@
    On ne montre jamais la coupe finie d'emblée : on la construit pas à pas, puis le moteur trace la coupe exacte et on compare (correction progressive).
    Tout vient du moteur Géologie (coupe exacte, points de contact en surface, pendage apparent). */
 import * as K from '../kit.js';
-import { geoMapSvg, mapPt, azArrow, callout, toward, top, legendSvg } from './geomap.js';
-import { missionGeo, tabGeo, exoGeo, galerie, TAB_AB, EXO_AB, midLine } from './geoworld.js';
+import { geoMapSvg, mapPt, azArrow, callout, toward, top, legendSvg, timeArrow } from './geomap.js';
+import { missionGeo, tabGeo, exoGeo, galerie, foldGeos, TAB_AB, EXO_AB, midLine } from './geoworld.js';
 import * as S from './geosection.js';
-import { apparentDip } from '../../engine/geology/index.js';
+import { apparentDip, contactVariants } from '../../engine/geology/index.js';
 import { recapFig } from './mission.js';
 const { C, txt, line, rect, circ, path, poly, arrow, at, badge, tag } = K;
 
-const RAD = Math.PI / 180, SEC = { x: 10, y: 3, w: 144, h: 50 };
-const bot = (label, o = {}) => callout(80, 61, label, { w: 122, lines: 2, size: 5.4, ...o });
+const RAD = Math.PI / 180;
+/* Bandeau d'énoncé au bas de la figure : il grandit avec la salle / le format 4:3 (K.fs) mais reste dans une bande de BOT_MAX u ; les coupes au-dessus
+   cèdent exactement la hauteur gagnée par le texte (SEC.h) — sinon le bandeau recouvre le bas des coupes (audit v3.1, formats 4:3 / 5:4 / amphi). */
+const BOT_MAX = 24, over = () => Math.min(Math.max(0, K.calloutH() - 17), BOT_MAX - 17);
+export const SEC = { x: 10, y: 3, w: 144, get h() { return 50 - over() - 1.5; } };
+const bot = (label, o = {}) => callout(80, 61, label, { w: 122, lines: 2, size: 5.4, maxH: BOT_MAX, ...o });
 const sense = (S0, dipAz) => Math.cos((dipAz - S0.az) * RAD) >= 0 ? 1 : -1;       // +1 : les contacts descendent vers B (à droite)
 const ms = () => { const M = missionGeo(); return { M, s: S.sectionOf(M, M.A, M.B) }; };
 const ab = (F, s, quiet = true) => { const y = F.box.y + F.box.h + 3.4; return badge(F.X(0), y, 'A', { r: 2.6, fill: C.acc, quiet }) + badge(F.X(s.L), y, 'B', { r: 2.6, fill: C.acc, quiet }); };
@@ -20,26 +24,29 @@ const lines = (s, F, a, sn, o = {}) => s.cps.map(c => S.dipLine(F, c, typeof a =
 const sky = '#ffffff';
 
 export const coupe = {
-  id: 'coupe', title: 'topic.11', seed: 4,
+  id: 'coupe', thread: true, title: 'topic.11', seed: 4,
   scenes: [
-    { id: 'hook', kind: 'hook', steps: 3, min: 1,
+    { id: 'hook', step: 'observe', kind: 'hook', steps: 3, min: 1,
       fig: (st, p, X) => {
         const { s } = ms(), F = S.frame(s, SEC);
         let o = S.groundFill(s, F) + (st >= 1 ? S.stripSvg(s, F) + S.contactDots(s, F) : path(S.terrainD(s, F), { stroke: C.ink, w: .9 })) + ab(F, s) + S.frameRect(F);
         o += st === 2 ? txt(F.X(s.L / 2), F.box.y + F.box.h * .72, '?', { size: 15, w: 800, fill: C.acc }) : '';
         return o + (st === 0 ? bot(X.t('coupe.hook.t0')) : st === 1 ? bot(X.t('coupe.hook.t1')) : bot(X.t('coupe.hook.t2'), { fill: C.acc }));
       } },
-    { id: 'v1', kind: 'vote', min: 2,
-      vote: { opts: [{ ok: true }, { mis: 'g-coupe-sens' }, { mis: 'g-coupe-vert' }, { mis: 'g-coupe-horiz' }],
+    { id: 'v1', step: 'verify', kind: 'vote', min: 2,
+      vote: { opts: [{ ok: true }, { mis: 'g-coupe-sens' }, { mis: 'g-coupe-vert' }, { mis: 'g-coupe-horiz' }], layout: 'gallery',
+        /* options FIGURÉES (engine/geology/distractors.js) : le vrai pendage apparent, le sens inversé, des contacts verticaux, des contacts à plat */
+        optFig: (c, box) => { const { M } = ms(); return S.contactSection(S.miniSectionOf(M, M.A, M.B), box, contactVariants({ apparent: M.apparent, sense: sense(M, M.dipAz) })[c]); },
+        /* contexte : la question et la carte (grande, avec la flèche de pendage bien visible) ; tout reste dans x < 54 */
         draw: (st, X) => {
-          const { M, s } = ms(), box = { x: 4, y: 26, w: 82, h: 36 }, F = S.frame(s, box), ins = { x: 60, y: 2, w: 26, h: 17.9 }, a = mapPt(M, ins, M.A), b = mapPt(M, ins, M.B), c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-          const f = K.fit(X.t('coupe.v1.top', { dip: M.dip, dir: toward(M.dipAz) }), 52, 4.8, 3);
-          return S.groundFill(s, F) + S.stripSvg(s, F, { w: 2 }) + S.contactDots(s, F, 1.1) + S.frameRect(F) + ab(F, s) +
-            geoMapSvg(M, ins, {}) + line(a[0], a[1], b[0], b[1], { c: C.ink, w: .9 }) + azArrow(c[0], c[1], M.dipAz, 6, { c: C.acc, w: 1.2, head: 2.4 }) +
-            K.txtL(4, 5.2, f.lines, { size: f.size, lh: f.size * 1.2, anchor: 'start', w: 800, fixed: true });
+          const { M } = ms(), ins = { x: 4, y: 36, w: 46, h: 31.6 }, a = mapPt(M, ins, M.A), b = mapPt(M, ins, M.B), c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+          const f = K.fitBox(X.t('coupe.v1.top', { dip: M.dip, dir: toward(M.dipAz) }), 48, 29, 5.6, 4, 1.2);   // ≤ 29 u de haut : le texte ne mord jamais sur la carte (y ≥ 36)
+          return K.txtL(4, 5.4, f.lines, { size: f.size, lh: f.size * 1.2, anchor: 'start', w: 800, fixed: true }) + geoMapSvg(M, ins, {}) + line(a[0], a[1], b[0], b[1], { c: C.ink, w: 1.1 }) +
+            badge(a[0], a[1], 'A', { r: 2.4, fill: C.acc, quiet: true }) + badge(b[0], b[1], 'B', { r: 2.4, fill: C.acc, quiet: true }) +
+            azArrow(c[0], c[1], M.dipAz, 12, { c: '#fff', w: 3.8, head: 6.4 }) + azArrow(c[0], c[1], M.dipAz, 12, { c: C.acc, w: 2, head: 4.6 });
         } },
       q: 1 },
-    { id: 'horiz', kind: 'build', steps: 4, min: 2,
+    { id: 'horiz', step: 'verify', kind: 'build', steps: 4, min: 2,
       fig: (st, p, X) => {
         const T = tabGeo(), m = missionGeo().m, s = S.sectionOf(T, TAB_AB.A, TAB_AB.B), F = S.frame(s, SEC);
         let o = S.groundFill(s, F);
@@ -49,7 +56,7 @@ export const coupe = {
         if (st >= 1) o += T.levels.map(z => txt(F.box.x + 1, F.Z(z) - 1.6, String(z), { size: 4.2, w: 800, anchor: 'start', halo: true })).join('');
         return o + [bot(X.t('coupe.horiz.t0')), bot(X.t('coupe.horiz.t1')), bot(X.t('coupe.horiz.t2')), bot(X.t('coupe.horiz.t3'), { fill: C.pri })][st];
       } },
-    { id: 'mono', kind: 'build', steps: 6, min: 5,
+    { id: 'mono', step: 'verify', kind: 'build', steps: 6, min: 5,
       fig: (st, p, X) => {
         const { M, s } = ms(), F = S.frame(s, SEC), sn = sense(M, M.dipAz), a = M.apparent, c0 = s.cps[0];
         let o = S.groundFill(s, F);
@@ -61,7 +68,7 @@ export const coupe = {
         const e = st >= 5 ? Math.abs((S.exactAngle(s, s.cps[1].from, s.cps[1].to) || a) - a) : 0;
         return o + [bot(X.t('coupe.mono.t0')), bot(X.t('coupe.mono.t1', { d: M.dip, b: X.nf(Math.abs(((M.dipAz - M.az + 540) % 360) - 180), 0), a: X.nf(a, 0) })), bot(X.t('coupe.mono.t2', { a: X.nf(a, 0) }), { fill: C.acc }), bot(X.t('coupe.mono.t3')), bot(X.t('coupe.mono.t4')), bot(X.t('coupe.mono.t5', { e: X.nf(e, 1) }), { fill: C.pri })][st];
       } },
-    { id: 'v2', kind: 'vote', min: 3,
+    { id: 'v2', step: 'measure', kind: 'vote', min: 3,
       vote: { opts: [{ ok: true }, { mis: 'g-coupe-fort' }, { mis: 'g-coupe-fan' }, { mis: 'g-coupe-ok' }],
         draw: (st, X) => {
           const { M, s } = ms(), box = { x: 4, y: 20, w: 82, h: 40 }, F = S.frame(s, box), sn = sense(M, M.dipAz);
@@ -70,7 +77,7 @@ export const coupe = {
           return o + S.frameRect(F) + top(X.t('coupe.v2.top'));
         } },
       q: 1 },
-    { id: 'erreurs', kind: 'show', steps: 4, min: 2,
+    { id: 'erreurs', step: 'measure', kind: 'show', steps: 4, min: 2,
       fig: (st, p, X) => {
         const { M, s } = ms(), F = S.frame(s, SEC), sn = sense(M, M.dipAz), a = M.apparent;
         let o = S.groundFill(s, F) + S.clipped(s, F, S.regionsSvg(s, F, { op: st === 0 ? 1 : .3, lineOp: st === 0 ? 1 : .25 }), { ground: true });
@@ -78,36 +85,43 @@ export const coupe = {
         o += S.stripSvg(s, F) + S.contactDots(s, F, 1.1) + S.frameRect(F) + ab(F, s);
         return o + [bot(X.t('coupe.erreurs.t0'), { fill: C.pri }), bot(X.t('coupe.erreurs.t1'), { fill: C.red }), bot(X.t('coupe.erreurs.t2'), { fill: C.red }), bot(X.t('coupe.erreurs.t3'), { fill: C.red })][st];
       } },
-    { id: 'apparent', kind: 'show', steps: 4, min: 3,
+    { id: 'apparent', step: 'measure', kind: 'show', steps: 4, min: 3,
       fig: (st, p, X) => {
         const dip = 45, beta = 60, app = apparentDip(dip, 90, 90 - beta), R = Math.PI / 180;
         let o = rect(5, 4, 66, 46, { fill: C.soft, stroke: C.ink, w: .5, rx: 2 }) + line(38, 6, 38, 48, { c: C.acc, w: 1.3 }) + arrow(38, 27, 54, 27, { c: C.ink, w: 1.3, head: 3.4 }) + txt(58.2, 27, `${dip}°`, { size: 4.4, w: 800, anchor: 'start' });
         const AB = [[14, 38], [62, 38]], CD = [[20, 46], [20 + 44 * Math.cos(beta * R), 46 - 44 * Math.sin(beta * R)]];
         o += at(st, 1, arrow(AB[0][0], AB[0][1], AB[1][0], AB[1][1], { c: C.blue, w: 1.1, head: 3 }) + rect(76, 4, 78, 22, { fill: '#fff', stroke: C.ink, w: .5, rx: 1 }) + line(78, 10, 152, 10, { c: C.ink, w: .8 }) + line(104, 10, 130, 10 + 26 * Math.tan(dip * R), { c: C.blue, w: 1.6 }) + tag(137, 20, `${dip}°`, { size: 4.6, fill: C.blue }), { rest: st > 1 });
         o += at(st, 2, arrow(CD[0][0], CD[0][1], CD[1][0], CD[1][1], { c: C.green, w: 1.1, head: 3 }) + rect(76, 28, 78, 22, { fill: '#fff', stroke: C.ink, w: .5, rx: 1 }) + line(78, 33, 152, 33, { c: C.ink, w: .8 }) + line(104, 33, 130, 33 + 26 * Math.tan(app * R), { c: C.green, w: 1.6 }) + tag(137, 44, `${X.nf(app, 0)}°`, { size: 4.6, fill: C.green }), { rest: st > 2 });
-        return o + [bot(X.t('coupe.apparent.t0')), bot(X.t('coupe.apparent.t1')), bot(X.t('coupe.apparent.t2')), bot(X.t('coupe.apparent.t3', { b: beta }), { fill: C.acc })][st];
+        /* schéma en coordonnées fixes : réduit autour de x = 80 pour laisser sa place au bandeau (SEC.h / 50) */
+        const kf = SEC.h / 50;
+        return K.g(o, { transform: `translate(80 0) scale(${kf.toFixed(3)}) translate(-80 0)` }) + [bot(X.t('coupe.apparent.t0')), bot(X.t('coupe.apparent.t1')), bot(X.t('coupe.apparent.t2')), bot(X.t('coupe.apparent.t3', { b: beta }), { fill: C.acc })][st];
       } },
-    { id: 'ev', kind: 'show', steps: 3, min: 2, param: { values: [1, 2, 3], start: 0, label: (v, i, X) => X.t('coupe.ev.p', { n: v }) },
+    { id: 'ev', step: 'measure', kind: 'show', steps: 3, min: 2, param: { values: [1, 2, 3], start: 0, label: (v, i, X) => X.t('coupe.ev.p', { n: v }) },
       fig: (st, ev, X) => {
         const { M, s } = ms(), F = S.frame(s, SEC, ev), sn = sense(M, M.dipAz), a = M.apparent, c0 = s.cps[1];
         let o = S.groundFill(s, F) + S.clipped(s, F, S.regionsSvg(s, F, {}) + lines(s, F, a, sn, { c: C.ink, w: 1 }), { ground: true }) + S.stripSvg(s, F) + S.frameRect(F);
         if (st >= 1) o += tag(F.X(c0.s) + (sn > 0 ? 20 : -20), Math.min(F.Z(c0.z) + 11, 44), `${X.nf(S.drawnAngle(a, ev), 0)}°`, { size: 5, fill: ev === 1 ? C.green : C.red });
         return o + [bot(X.t('coupe.ev.t0', { n: ev })), bot(X.t(ev === 1 ? 'coupe.ev.t1b' : 'coupe.ev.t1', { m: X.nf(S.drawnAngle(a, ev), 0), a: X.nf(a, 0) }), { fill: ev === 1 ? C.pri : C.red }), bot(X.t('coupe.ev.t2'), { fill: C.pri })][st];
       } },
-    { id: 'v3', kind: 'vote', min: 2,
-      vote: { opts: [{ ok: true }, { mis: 'g-coupe-pli-inv' }, { mis: 'g-coupe-pli-mono' }, { mis: 'g-coupe-pli-tab' }],
+    { id: 'v3', step: 'suppose', kind: 'vote', min: 2,
+      vote: { opts: [{ ok: true }, { mis: 'g-coupe-pli-inv' }, { mis: 'g-coupe-pli-mono' }, { mis: 'g-coupe-pli-tab' }], layout: 'gallery',
+        /* options FIGURÉES : la même carte, quatre structures sur le MÊME terrain (anticlinal, cuvette, bandes inclinées, couches horizontales) */
+        optFig: (c, box) => { const g = foldGeos()[c].ctx, l = midLine(g); return S.structureSection(S.miniSectionOf(g, l.A, l.B), box); },
         draw: (st, X) => {
-          const G = galerie('anticlinal'), box = { x: 2, y: 13, w: 66, h: 45.5 }, d = G.geo.dem, a = mapPt(G, box, midLine(G).A), b = mapPt(G, box, midLine(G).B);
-          return geoMapSvg(G, box, {}) + line(a[0], a[1], b[0], b[1], { c: C.ink, w: 1.1 }) + badge(a[0], a[1], 'A', { r: 2.4, fill: C.acc, quiet: true }) + badge(b[0], b[1], 'B', { r: 2.4, fill: C.acc, quiet: true }) +
-            legendSvg(G, 72, 13, 13, 45) + txt(78.5, 10.4, X.t('coupe.v3.young'), { size: 3.6, w: 700, fill: C.mute }) + txt(78.5, 61.6, X.t('coupe.v3.old'), { size: 3.6, w: 700, fill: C.mute }) + top(X.t('coupe.v3.top'));
+          /* mise en page dynamique : le titre (≤ 2 lignes, plus grand en 4:3 / en salle) pousse la carte vers le bas ; le sens du temps est une flèche, pas deux mots */
+          const G = galerie('anticlinal'), d = G.geo.dem, f = K.fit(X.t('coupe.v3.top'), 54, 5.2, 2), y0 = 5 + f.lines.length * f.size * 1.2 + 2, box = { x: 2, y: y0, w: 36, h: 36 * (d.H - 1) / (d.W - 1) };
+          const a = mapPt(G, box, midLine(G).A), b = mapPt(G, box, midLine(G).B), lg = Math.min(36, 66 - y0);
+          return K.txtL(3, 5, f.lines, { size: f.size, lh: f.size * 1.2, anchor: 'start', w: 800, fixed: true }) + geoMapSvg(G, box, {}) + line(a[0], a[1], b[0], b[1], { c: C.ink, w: 1.1 }) +
+            badge(a[0], a[1], 'A', { r: 2.4, fill: C.acc, quiet: true }) + badge(b[0], b[1], 'B', { r: 2.4, fill: C.acc, quiet: true }) +
+            legendSvg(G, 40, y0, 9, lg) + timeArrow(57.5, y0 + 1, y0 + lg - 1, X.t('geocarte.time'));
         } },
       q: 1 },
-    { id: 'struct', kind: 'show', steps: 5, min: 4,
+    { id: 'struct', step: 'suppose', kind: 'show', steps: 5, min: 4,
       fig: (st, p, X) => {
         const k = ['tabulaire', 'monoclinal', 'anticlinal', 'synclinal', 'discordance'][st], G = galerie(k), l = midLine(G), s = S.sectionOf(G, l.A, l.B, 260, 140, .3), F = S.frame(s, SEC);
         return S.groundFill(s, F) + S.clipped(s, F, S.regionsSvg(s, F, { labels: true }), { ground: true }) + S.stripSvg(s, F, { w: 1.6 }) + S.frameRect(F) + ab(F, s) + bot(X.t('coupe.sig.' + k), { fill: k === 'anticlinal' || k === 'synclinal' ? C.acc : C.ink });
       } },
-    { id: 'pr', kind: 'practice', min: 5, practice: { seconds: 300, draw: true },
+    { id: 'pr', step: 'verify', kind: 'practice', min: 5, practice: { seconds: 300, draw: true },
       fig: (st, p, X) => {
         const E = exoGeo(), s = S.sectionOf(E, EXO_AB.A, EXO_AB.B), F = S.frame(s, SEC), dip = 30, dipAz = 100, a = apparentDip(dip, dipAz, s.az), sn = sense(s, dipAz);
         let o = S.groundFill(s, F);
@@ -115,7 +129,7 @@ export const coupe = {
         o += S.stripSvg(s, F) + S.contactDots(s, F, 1.1) + S.frameRect(F) + ab(F, s);
         return o + (st < 2 ? bot(X.t('coupe.pr.t0', { d: dip, dir: toward(dipAz), az: X.nf(s.az, 0) })) : bot(X.t('coupe.pr.t2', { a: X.nf(a, 0), b: X.nf(Math.abs(((dipAz - s.az + 540) % 360) - 180), 0) }), { fill: C.pri }));
       } },
-    { id: 'recap', kind: 'recap', steps: 4, min: 1, fig: (st, p, X) => recapFig('coupe', st, X) }
+    { id: 'recap', step: 'all', kind: 'recap', steps: 4, min: 1, fig: (st, p, X) => recapFig('coupe', st, X) }
   ]
 };
 

@@ -19,15 +19,16 @@ export const echelle = {
         o += at(st, 1, rect(86, 8, 68, 50, { fill: '#e9f1e4', stroke: C.ink, w: .8, rx: 1, dash: '2 1.5' }) + txt(120, 14.5, X.t('echelle.ground'), { size: 4 }) +
           circ(94, 34, 2, { fill: C.ink }) + circ(146, 34, 2, { fill: C.ink }) + arrow(70, 34, 84, 34, { c: C.mute, w: .7 }) +
           line(96, 34, 144, 34, { c: C.acc, w: .9, dash: '2 1.2' }) + txt(94, 41, 'A', { size: 4.6 }) + txt(146, 41, 'B', { size: 4.6 }));
-        o += at(st, 1, st === 1 ? tag(120, 27, '? m', { size: 7.5, fill: C.ink }) : '');
-        o += at(st, 2, tag(120, 27, X.t('echelle.250'), { size: 7.5, fill: C.acc }) + tag(37, 50, '1 / 25 000', { size: 4.6, fill: C.ink }));
+        const yv = Math.max(27, 14.5 + 3.3 * K.fsz() + 7.5 * K.fsz() * .75 + .6);   /* sous l'intitulé « Sur le terrain », même agrandi (5:4, amphi) */
+        o += at(st, 1, st === 1 ? tag(120, yv, '? m', { size: 7.5, fill: C.ink }) : '');
+        o += at(st, 2, tag(120, yv, X.t('echelle.250'), { size: 7.5, fill: C.acc }) + tag(37, 50, '1 / 25 000', { size: 4.6, fill: C.ink }));
         return o;
       } },
     { id: 'ratio', kind: 'show', steps: 3, min: 3, param: { values: [10000, 25000, 50000, 100000], start: 1, label: (v, i, X) => '1 / ' + X.nf(v) },
       fig: (st, N, X) => {
         const cm = 4, u = 13, x0 = 14, real = cm * N / 100, rl = dist(real, X.nf);
         let o = txt(x0 + cm * u / 2, 8, `${cm} cm`, { size: 6.4 }) + ruler(x0, 12, cm, u) + circ(x0, 14.2, 1.6, { fill: C.acc }) + circ(x0 + cm * u, 14.2, 1.6, { fill: C.acc }) + txt(x0 + cm * u / 2, 28.5, X.t('echelle.map'), { size: 3.8, w: 600, fill: C.mute });
-        o += at(st, 1, path(`M${x0} 17L${x0} 40M${x0 + cm * u} 17L150 40`, { stroke: C.mute, w: .5, dash: '1.5 1.5' }) + rect(x0, 40, 136, 6, { fill: C.pri, rx: 1 }) + tag(82, 55, rl, { size: 8.4, fill: C.pri }) + txt(82, 64, X.t('echelle.ground'), { size: 3.8, w: 600, fill: C.mute }));
+        o += at(st, 1, path(`M${x0} 17L${x0} 40M${x0 + cm * u} 17L150 40`, { stroke: C.mute, w: .5, dash: '1.5 1.5' }) + rect(x0, 40, 136, 6, { fill: C.pri, rx: 1 }) + tag(104, 47.5 + 8.4 * K.fsz() * .75, rl, { size: 8.4, fill: C.pri }) + txt(x0 + 1, 51.5, X.t('echelle.ground'), { size: 3.8, w: 600, fill: C.mute, anchor: 'start' }));   /* étiquette « terrain » à gauche : la valeur agrandie ne la recouvre plus */
         o += at(st, 2, rect(80, 2, 76, 28, { fill: C.soft, rx: 1.5 }) + txt(118, 9, 'D = d × N', { size: 6.6 }) + txt(118, 18, `${cm} cm × ${X.nf(N)}`, { size: 5, w: 600 }) + txt(118, 25.5, `= ${X.nf(cm * N)} cm = ${rl}`, { size: 5, fill: C.pri }));
         return o;
       } },

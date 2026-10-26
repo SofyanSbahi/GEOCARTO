@@ -10,4 +10,6 @@ import { FR as profil } from './profil.js';
 import { FR as geo } from './geologie.js';
 import { FR as coupe } from './coupe.js';
 import { FR as ui } from './ui.fr.js';
-register('fr', { ...ui, ...echelle, ...orient, ...coord, ...relief, ...mission, ...pente, ...profil, ...geo, ...coupe });
+import { FR as thread } from '../thread.js';
+import { FR as prereq } from './prereq.js';
+register('fr', { ...ui, ...thread, ...prereq, ...echelle, ...orient, ...coord, ...relief, ...mission, ...pente, ...profil, ...geo, ...coupe });
