@@ -1,6 +1,6 @@
 # GéoCarto v3.1 — candidat à la livraison (RC1) et liste de contrôle
 
-> Version 1.3 · 2026-10-26 · `3.1.0-rc.4` (rc.4 = rc.3 + lecture tactile du simulateur de profil, § 9 ; bureau et leçons Stage identiques). Précédemment `3.1.0-rc.3` (RC2 = RC1 + finition de projection des leçons de topographie, voir § 7). Contenu pédagogique rédigé par la machine : **brouillon à relire par un géologue** (porte de livraison G3 ci-dessous).
+> Version 1.4 · 2026-10-26 · `3.1.0-rc.5` (rc.5 = rc.4 + ergonomie de la vue enseignant, § 10 ; écran projeté identique). Précédemment `3.1.0-rc.4` (RC2 = RC1 + finition de projection des leçons de topographie, voir § 7). Contenu pédagogique rédigé par la machine : **brouillon à relire par un géologue** (porte de livraison G3 ci-dessous).
 
 ## 1. Ce que contient la RC1
 Leçons Stage « Cartes géologiques » (15 scènes), « Coupes géologiques » (12 scènes) et préalable « Lire le relief » (3 votes) ; votes mélangés ; fil du raisonnement ; options figurées ; palette de projection ; vue présentateur avec malentendu dominant ; outil d'audit `npm run audit:geology`. Détail : [V3_1_REVIEW.md](V3_1_REVIEW.md), plan et journal : [V3_1_PLAN.md](V3_1_PLAN.md).
@@ -35,7 +35,7 @@ Ne fusionner #1 que si la CI est verte (elle teste `dist/app.js` reproductible).
 3. [ ] **Changer le code enseignant** (M6), vérifier qu'il n'apparaît dans aucun document partagé ; décider d'une licence (code : MIT/Apache ; contenu : CC-BY, après vérification des droits des figures).
 4. [ ] G3 : un relecteur nommé signe `docs/V3_1_REVIEW.md` §1 (date, nom, corrections). Retirer ou conserver la mention « brouillon automatique » selon son avis.
 5. [ ] G4 et G5 dans la salle.
-6. [ ] Passer `package.json` de `3.1.0-rc.4` à `3.1.0` ; étiqueter `v3.1.0` ; notes de version = résumé de la revue.
+6. [ ] Passer `package.json` de `3.1.0-rc.5` à `3.1.0` ; étiqueter `v3.1.0` ; notes de version = résumé de la revue.
 7. [ ] Activer GitHub Pages sur `main` (racine) ; ouvrir l'URL publique en navigation privée ; vérifier `#/stage/prereq`, `#/stage/geocarte`, `#/stage/coupe`, `#/stage/fil`.
 8. [ ] Sauvegarde : archive du dépôt (ou bundle) + export Zenodo si le contenu est ouvert (DOI).
 9. [ ] Ouvrir les tickets « v3.2 » issus de la revue (relecture, essai instrumenté, D « Histoire d'une carte », dette F7/F9, audit en CI).
@@ -75,3 +75,11 @@ Aucune fonction nouvelle (la v3.2 attend l'essai en classe) ; uniquement des dé
 - **Bulle de retour** près du point touché (même message que sous la carte), menu des altitudes ajusté à l'écran ; bouton de l'assistant masqué et carte remontée au-dessus de la barre d'onglets pendant cette étape.
 - **Pédagogie préservée** : aucun geste ne révèle d'altitude ; l'élève choisit toujours l'altitude lui-même ; les tolérances par mode restent les mêmes (seul le minimum tactile est relevé, compensé par le zoom).
 **Vérification** : bureau — rendu des étapes 2 et 3 et résultats des clics **identiques au pixel** à `main` (graine fixe, modes débutant et intermédiaire) ; téléphone (iPhone 13, Pixel 7, événements tactiles réels via le protocole Chrome) — pincement ×3,7, déplacement, loupe et sélection précise, sélection fiable une fois zoomé, aucune erreur ; 191 tests (6 nouveaux sur les gestes, vérifiés par mutation) ; `js/stage/` et `css/stage.css` inchangés.
+
+## 10. rc.5 — ergonomie de la vue enseignant (2026-10-26)
+**Écran projeté identique au pixel** (42 écrans de 5 leçons comparés à rc.4, capture déterministe) : l'essai en classe reste comparable. Changements limités à la vue enseignant et au lancement depuis l'index. Détail et suite (items 4 et 7) : [TEACHER_ERGONOMICS.md](TEACHER_ERGONOMICS.md).
+- **Touches dans la vue enseignant**, relayées à la projection (mêmes touches ; sauf Échap, F, H, P) — une télécommande de présentation fonctionne quelle que soit la fenêtre active.
+- **« 🎙️ Projection + vue enseignant »** sur chaque leçon de l'index : un clic ouvre la projection et met la vue enseignant dans l'onglet courant, avec un guide « deux écrans : trois gestes ».
+- **État de la liaison** : 🟢 synchronisé / 🟠 en attente / 🔴 projection non détectée (signal toutes les 2 s, perte après 5,5 s), bouton « Ouvrir la fenêtre de projection ».
+- **Grandes commandes** : ◀ / ▶ de 72 px, position scène / étape, boutons ≥ 52 px, votes 76 × 64 px.
+- **Vérifié dans Chromium** : lancement en un clic, → ← Début Fin relayés, votes A A B C 4 Maj+A → 4 votes, Échap/F/H/P non relayés, « . » écran vide relayé, projection fermée → 🔴 en 6 s, réouverture → 🟢 sur la scène en cours ; 197 tests (6 nouveaux, vérifiés par mutation).

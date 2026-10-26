@@ -210,3 +210,16 @@ a.st-ix-c:hover{border-color:var(--pri)}.st-ix-c.off{opacity:.6}
 .st-note{color:var(--mute);font-size:.85rem}
 
 .pv-dr{font-weight:600;color:#a15c00}.pv-dom{margin:.5em 0;padding:.5em .7em;border-left:4px solid #a15c00;background:#fff6e5}
+/* rc.5 — ergonomie enseignant : vue présentateur et lancement « 2 écrans » (la projection n'est pas concernée) */
+.pv-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 10px}.pv-bar .pv-status{margin:0;font-size:1.15rem}
+.pv-status.ko{color:var(--ko)}.pv-status.wait{color:var(--acc,#d9622b)}
+.pv-nav{display:flex;align-items:stretch;gap:12px;margin:0 0 14px}.pv-nav .pv-big{flex:1;min-height:72px;font-size:1.35rem;border-width:3px}
+.pv-nav .pv-next{background:var(--pri);color:#fff;border-color:var(--pri)}.pv-pos{align-self:center;font-weight:800;color:var(--mute);min-width:9em;text-align:center}
+.pv-off .pv-nav .pv-big,.pv-off [data-a]{opacity:.55}
+.pv-guide{background:var(--pri-l,#d9f0ea);border:2px solid var(--pri);border-radius:14px;padding:10px 16px;margin:0 0 12px}.pv-guide ol{margin:.4em 0 .6em 1.2em;padding:0}
+.pv .pv-b{min-height:52px;font-size:1.05rem}.pv .pv-b.l{min-height:44px;font-size:1rem}
+.pv-btns [data-a="vote"]{min-width:76px;min-height:64px;font-size:1.3rem}
+.pv-keys p{margin:0;font-size:.92rem;line-height:1.5;color:var(--mute)}
+.st-ix-w{display:flex;flex-direction:column}.st-ix-w>.st-ix-c{flex:1;border-bottom-left-radius:0;border-bottom-right-radius:0}
+.st-ix-dual{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:6px 10px;border:2px solid var(--line);border-top:0;border-radius:0 0 14px 14px;background:var(--pri-l,#d9f0ea);color:var(--pri);font:800 .95rem/1.2 system-ui,sans-serif;cursor:pointer}
+.st-ix-dual:hover,.st-ix-dual:focus-visible{background:var(--pri);color:#fff}.st-ix-dualhelp{color:var(--mute)}
