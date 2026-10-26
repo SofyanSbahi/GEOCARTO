@@ -36,7 +36,7 @@ Ce sont ces fonctions que le futur module **Stage · Profil** et les scènes de 
 ## Tests
 | Commande | Rôle |
 |---|---|
-| `npm test` (ou `node --test "tests/*.test.js"`) | 185 tests (v3.1) : golden, contrat des moteurs, propriétés, Stage (votes, mise en page, fil, options figurées, palette, enseignant) |
+| `npm test` (ou `node --test "tests/*.test.js"`) | 191 tests (v3.1) : golden, contrat des moteurs, propriétés, Stage (votes, mise en page, fil, options figurées, palette, enseignant) |
 | `node tools/make-golden.mjs` | **régénère la référence à partir du code historique** (`tests/legacy/`) ; à n'utiliser que pour figer un nouveau comportement voulu |
 | `tools/e2e/compare_legacy.py` | test différentiel navigateur : application d'origine ↔ refactorée (3 parcours de profil, 64 exercices, 28 pages au pixel près) |
 | `tools/stage/test_stage.py` | 28 vérifications du mode Stage |

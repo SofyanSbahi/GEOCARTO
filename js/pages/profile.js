@@ -1,5 +1,6 @@
 /* Simulateur de profil topographique sur papier millimétré numérique */
 import {h,fr,fitCanvas,clamp,rng,pick,DIRS16,dirName,azimuth,shuffle,parseNum} from '../core/util.js';
+import {attachTouch} from './profile-touch.js';
 import {makeDem,TYPES,autoEq,crossings,suggestLine,sample,slopePct} from '../core/terrain.js';
 import {makeSetup,paperGeometry,paperChoices,checkPaper,PAD,curveFn,evaluateProfile,diagnoseProfile,trendRuns,levelList,targetsFrom,firstMissing} from '../engine/profile/index.js';
 import {diagnosisLines} from '../core/profile-text.js';
@@ -34,13 +35,25 @@ let cleanup=[];const on=(t,e,f,o)=>{t.addEventListener(e,f,o);cleanup.push(()=>t
   view.append(stepper(),h('div',{class:'card'},h('h3',{},'1. Choisis ton exercice'),h('p',{class:'mute'},'Chaque terrain est généré à partir d\'un code : donne-le à un camarade pour qu\'il refasse exactement le même exercice.'),h('div',{class:'ctrl'},h('label',{},'Niveau d\'aide',seg)),desc,h('div',{class:'ctrl'},h('label',{},'Relief ',sel),h('label',{},'Échelle ',sc)),h('div',{class:'row'},h('button',{class:'btn acc',onclick:()=>{let t=sel.value;if(t==='aleatoire')t=pick(Object.keys(TYPES));newTerrain(t,Math.floor(Math.random()*1e6)+1,+sc.value);S.step=2;render()}},'🎲 Générer un terrain'),h('span',{class:'sp'}),codeIn,h('button',{class:'btn sec sm',onclick:()=>{const m=codeIn.value.trim().split('-');if(m.length===3&&TYPES[m[0]]){newTerrain(m[0],parseInt(m[1],36)||1,(+m[2]||25)*1000);S.step=2;render()}else toast('Code invalide')}},'Charger un code'))))}
 
  /* ---------- étape 2 : trait A–B ---------- */
- function mapCanvas(opts={}){const box=h('div',{class:'cvw'}),cv=h('canvas');box.append(cv);let k=1,w=0,hh=0;
-  const draw=()=>{w=box.clientWidth||600;hh=w*(S.dem.H-1)/(S.dem.W-1);const c=fitCanvas(cv,w,hh);k=drawMap(c,S.dem,w,hh,{eq:S.eq,shade:true,rivers:S.mode!=='expert',spots:true});
-   if(S.A){c.strokeStyle='#c0392b';c.lineWidth=2.5;c.setLineDash([8,5]);if(S.B){c.beginPath();c.moveTo(S.A.x*k,S.A.y*k);c.lineTo(S.B.x*k,S.B.y*k);c.stroke()}c.setLineDash([]);
-    [['A',S.A],['B',S.B]].forEach(([n,p])=>{if(!p)return;c.fillStyle='#c0392b';c.beginPath();c.arc(p.x*k,p.y*k,7,0,7);c.fill();c.fillStyle='#fff';c.font='700 11px system-ui';c.textAlign='center';c.fillText(n,p.x*k,p.y*k+4);})}
-   opts.after&&opts.after(c,k,w,hh)};
+ function mapCanvas(opts={}){const box=h('div',{class:'cvw'}),cv=h('canvas');box.append(cv);let k=1,w=0,hh=0,Z=1,ox=0,oy=0;
+  /* Z, ox, oy : zoom tactile (rc.4, étape Relevé). À Z = 1 le rendu est strictement celui d'avant (même appel à drawMap) : le bureau n'est pas touché.
+     À Z > 1 la carte est REDESSINÉE à la taille Z × w (traits et cotes nets), puis décalée de (ox, oy) ; échelle graphique et flèche du nord masquées. */
+  const paint=(c,kz,o)=>{if(S.A){c.strokeStyle='#c0392b';c.lineWidth=2.5;c.setLineDash([8,5]);if(S.B){c.beginPath();c.moveTo(S.A.x*kz,S.A.y*kz);c.lineTo(S.B.x*kz,S.B.y*kz);c.stroke()}c.setLineDash([]);
+    [['A',S.A],['B',S.B]].forEach(([n,p])=>{if(!p)return;c.fillStyle='#c0392b';c.beginPath();c.arc(p.x*kz,p.y*kz,7,0,7);c.fill();c.fillStyle='#fff';c.font='700 11px system-ui';c.textAlign='center';c.fillText(n,p.x*kz,p.y*kz+4);})}
+   opts.after&&opts.after(c,kz,w,hh,o)};
+  const draw=()=>{w=box.clientWidth||600;hh=w*(S.dem.H-1)/(S.dem.W-1);const c=fitCanvas(cv,w,hh);clampView();
+   if(Z===1){k=drawMap(c,S.dem,w,hh,{eq:S.eq,shade:true,rivers:S.mode!=='expert',spots:true});paint(c,k,{z:1})}
+   else{c.save();c.translate(-ox,-oy);k=drawMap(c,S.dem,w*Z,hh*Z,{eq:S.eq,shade:true,rivers:S.mode!=='expert',spots:true,scaleBar:false,north:false});paint(c,k,{z:Z});c.restore()}
+   opts.onDraw&&opts.onDraw(Z)};
+  const clampView=()=>{ox=clamp(ox,0,w*Z-w);oy=clamp(oy,0,hh*Z-hh)};
+  /* zoom autour d'un point (cx, cy) de la boîte : le point de la carte sous le doigt reste sous le doigt */
+  const zoomAt=(z,cx=w/2,cy=hh/2)=>{const nz=clamp(z,1,4),mx=(cx+ox)/Z,my=(cy+oy)/Z;Z=nz;ox=mx*Z-cx;oy=my*Z-cy;draw()};
   const ro=new ResizeObserver(draw);ro.observe(box);cleanup.push(()=>ro.disconnect());
-  return{box,cv,draw,k:()=>k,pos:e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*(S.dem.W-1),y:(e.clientY-r.top)/r.height*(S.dem.H-1)}}}}
+  /* rendu d'une loupe : la carte au facteur lz, centrée sur le point p (coordonnées du MNT), dans un canevas de taille s */
+  const lens=(lc,p,lz,s)=>{const c=fitCanvas(lc,s,s),kz=w*lz/(S.dem.W-1);c.save();c.translate(s/2-p.x*kz,s/2-p.y*kz);drawMap(c,S.dem,w*lz,hh*lz,{eq:S.eq,shade:true,rivers:S.mode!=='expert',spots:true,scaleBar:false,north:false});paint(c,kz,{z:lz,lens:true});c.restore();return c};
+  return{box,cv,draw,k:()=>k,zoom:()=>Z,zoomAt,panBy:(dx,dy,nd)=>{ox-=dx;oy-=dy;if(!nd)draw()},lens,size:()=>({w,hh}),
+   pos:e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left+ox)/(r.width*Z)*(S.dem.W-1),y:(e.clientY-r.top+oy)/(r.height*Z)*(S.dem.H-1)}},
+   toBox:p=>({x:p.x*k-ox,y:p.y*k-oy})}}
  function stepLine(){view.innerHTML='';const info=h('div',{class:'fb'}),btn=h('button',{class:'btn',disabled:true},'Valider le trait →');
   const upd=()=>{if(S.A&&S.B){const c=crossings(S.dem,S.A,S.B,S.eq),az=azimuth(S.B.x-S.A.x,-(S.B.y-S.A.y));info.className='fb';info.innerHTML=`Longueur ${fr(LCM(),1)} cm (${fr(LM()/1000,2)} km) · direction ${dirName(az)} (${Math.round(az)}°) · ${c.length} courbes traversées`;const okLen=LCM()>=6,okC=c.length>=6;btn.disabled=!(okLen&&okC);if(!okLen||!okC){info.className='fb ko';info.innerHTML+=' — trait '+(!okLen?'trop court (≥ 6 cm)':'trop plat (≥ 6 courbes)')}}else info.textContent=S.A?'Place maintenant le point B.':'Touche la carte pour placer A.'};
   const M=mapCanvas({});let drag=null;
@@ -53,23 +66,44 @@ let cleanup=[];const on=(t,e,f,o)=>{t.addEventListener(e,f,o);cleanup.push(()=>t
 
  /* ---------- étape 3 : relevé des intersections ---------- */
  function stepSurvey(){view.innerHTML='';const total=S.cross.length,info=h('div',{class:'fb'}),prog=h('b',{}),levels=levelList(S.dem,S.eq);
-  const strip=h('canvas'),sw=h('div',{class:'cvw'},strip);let M,pop=null;
+  const strip=h('canvas'),sw=h('div',{class:'cvw'},strip);let M,pop=null,tip=null;
+  const zl=h('span',{class:'zl'},'×1');   /* niveau de zoom tactile (rc.4) */
   const upd=()=>{prog.textContent=`${S.marks.length} / ${total} intersections relevées`;btn.disabled=S.mode==='debutant'?S.marks.length<total:S.marks.length<3;drawStrip()};
   const drawStrip=()=>{const w=sw.clientWidth||600,c=fitCanvas(strip,w,64);c.fillStyle='#f5efdc';c.fillRect(0,0,w,64);c.fillStyle='#bbb';c.fillRect(0,0,w,2);c.strokeStyle='#333';c.fillStyle='#222';c.font='700 11px system-ui';c.textAlign='center';
    c.beginPath();c.moveTo(10,10);c.lineTo(w-10,10);c.stroke();S.marks.forEach(m=>{const x=10+m.t*(w-20);c.strokeStyle=m.zs===m.z||S.mode==='expert'?'#222':'#c0392b';c.beginPath();c.moveTo(x,10);c.lineTo(x,26);c.stroke();c.save();c.translate(x,32);c.rotate(Math.PI/2.6);c.textAlign='left';c.fillText(m.zs,0,0);c.restore()});c.textAlign='left';c.fillStyle='#c0392b';c.fillText('A',2,60);c.textAlign='right';c.fillText('B',w-2,60)};
-  M=mapCanvas({after:(c,k)=>{c.strokeStyle='#c0392b';c.lineWidth=2.5;c.beginPath();c.moveTo(S.A.x*k,S.A.y*k);c.lineTo(S.B.x*k,S.B.y*k);c.stroke();
+  M=mapCanvas({onDraw:z=>{zl.textContent='×'+fr(z,1)},after:(c,k)=>{c.strokeStyle='#c0392b';c.lineWidth=2.5;c.beginPath();c.moveTo(S.A.x*k,S.A.y*k);c.lineTo(S.B.x*k,S.B.y*k);c.stroke();
     S.cross.forEach((q,i)=>{const got=S.marks.find(m=>m.i===i);if(got){c.fillStyle=got.zs===got.z?'#2e9e4f':'#d9622b';c.beginPath();c.arc(q.x*k,q.y*k,5,0,7);c.fill()}else if(S.mode==='debutant'||S.revealed){c.strokeStyle='#2d86c8';c.lineWidth=2.5;c.beginPath();c.arc(q.x*k,q.y*k,9,0,7);c.stroke()}});
     [['A',S.A],['B',S.B]].forEach(([n,p])=>{c.fillStyle='#c0392b';c.beginPath();c.arc(p.x*k,p.y*k,7,0,7);c.fill();c.fillStyle='#fff';c.font='700 11px system-ui';c.textAlign='center';c.fillText(n,p.x*k,p.y*k+4)})}});
   const mark=(i,zs)=>{const q=S.cross[i];S.marks.push({i,t:q.t,s:q.s,z:q.z,zs});if(zs===q.z)info.className='fb ok',info.textContent=`✅ ${q.z} m`;else if(S.mode==='intermediaire'){S.marks.pop();info.className='fb ko';info.textContent=`❌ ${zs} m n'est pas l'altitude de cette courbe. Regarde la maîtresse la plus proche et compte les courbes.`;return}else info.textContent='';M.draw();upd()};
-  on(M.cv,'pointerdown',e=>{if(pop){pop.remove();pop=null}const p=M.pos(e),k=M.k(),A=S.A,B=S.B,dx=B.x-A.x,dy=B.y-A.y,L2=dx*dx+dy*dy,t=clamp(((p.x-A.x)*dx+(p.y-A.y)*dy)/L2,0,1),qx=A.x+dx*t,qy=A.y+dy*t;
+  on(M.cv,'pointerdown',e=>{if(e.pointerType==='touch')return;if(pop){pop.remove();pop=null}const p=M.pos(e),k=M.k(),A=S.A,B=S.B,dx=B.x-A.x,dy=B.y-A.y,L2=dx*dx+dy*dy,t=clamp(((p.x-A.x)*dx+(p.y-A.y)*dy)/L2,0,1),qx=A.x+dx*t,qy=A.y+dy*t;
    if(Math.hypot((qx-p.x)*k,(qy-p.y)*k)>26){info.className='fb';info.textContent='Touche le trait A–B, à l\'endroit où il coupe une courbe.';return}
    const tol=(S.mode==='debutant'?18:S.mode==='intermediaire'?13:9)/k/Math.sqrt(L2)*1; // tolérance en t
    let bi=-1,bd=1e9;S.cross.forEach((q,i)=>{const d=Math.abs(q.t-t);if(d<bd&&!S.marks.find(m=>m.i===i)){bd=d;bi=i}});
    if(bi<0||bd>tol*(Math.sqrt(L2)>0?1:1)*(1)){info.className='fb ko';info.textContent=S.mode==='expert'?'':'Pas d\'intersection ici.';return}
    if(S.mode==='debutant'){mark(bi,S.cross[bi].z);return}
    const r=M.box.getBoundingClientRect();pop=h('div',{class:'pop',style:`left:${clamp(e.clientX-r.left-60,4,r.width-270)}px;top:${clamp(e.clientY-r.top+14,4,r.height-120)}px;max-height:150px;overflow:auto`},h('b',{style:'width:100%;font-size:.8rem'},'Altitude de cette courbe ?'),...levels.map(z=>h('button',{onclick:()=>{pop.remove();pop=null;mark(bi,z)}},z)));M.box.append(pop)});
+  /* ---- tactile (rc.4) : mêmes règles pédagogiques, cibles plus grandes, ambiguïté signalée au lieu d'être tranchée au hasard ;
+     l'altitude n'est JAMAIS affichée avant la réponse de l'élève (la bulle reprend le message déjà donné sous la carte). ---- */
+  const bubble=(txt,cls,q)=>{if(tip){tip.remove();tip=null}if(!txt)return;const {w}=M.size();tip=h('div',{class:'tapfb '+(cls||''),role:'status',style:`left:${clamp(q.x-110,4,Math.max(4,w-224))}px;top:${Math.max(4,q.y-58)}px`},txt);M.box.append(tip);const t=tip;setTimeout(()=>{t.remove();if(tip===t)tip=null},2600)};
+  const pickTouch=(p,q,{precise})=>{if(pop){pop.remove();pop=null}
+   const f=precise?Math.min(M.zoom()*3,12)/M.zoom():1,k=M.k()*f,A=S.A,B=S.B,dx=B.x-A.x,dy=B.y-A.y,L2=dx*dx+dy*dy,L=Math.sqrt(L2),t=clamp(((p.x-A.x)*dx+(p.y-A.y)*dy)/L2,0,1),qx=A.x+dx*t,qy=A.y+dy*t;
+   if(Math.hypot((qx-p.x)*k,(qy-p.y)*k)>(precise?26:30)){bubble('Touche le trait A–B, à l\'endroit où il coupe une courbe.','',q);return}
+   const tolPx=Math.max(S.mode==='debutant'?18:S.mode==='intermediaire'?13:9,precise?10:22),tol=tolPx/k/L,gap=precise?8:16;   // cible ≥ 44 px au doigt ; sous la loupe, le réticule vise à ~2 px près
+   const cand=S.cross.map((c,i)=>({i,d:Math.abs(c.t-t),t:c.t})).filter(c=>!S.marks.find(m=>m.i===c.i)).sort((a,b)=>a.d-b.d);
+   if(!cand.length||cand[0].d>tol){bubble(S.mode==='expert'?'':'Pas d\'intersection ici.','ko',q);return}
+   if(cand[1]&&cand[1].d<=tol&&Math.abs(cand[1].t-cand[0].t)*L*k<gap){bubble(precise?'Courbes encore trop serrées : zoome d\'abord avec deux doigts (ou +), puis reprends la loupe.':'Deux courbes très proches : garde le doigt appuyé pour la loupe, ou zoome avec deux doigts.','',q);return}
+   const bi=cand[0].i;
+   if(S.mode==='debutant'){mark(bi,S.cross[bi].z);bubble(info.textContent,/\bok\b/.test(info.className)?'ok':/\bko\b/.test(info.className)?'ko':'',q);return}
+   const {w,hh}=M.size();pop=h('div',{class:'pop',style:`left:${clamp(q.x-60,4,Math.max(4,w-264))}px;top:4px;max-height:${Math.min(150,hh-8)}px;overflow:auto`},h('b',{style:'width:100%;font-size:.8rem'},'Altitude de cette courbe ?'),...levels.map(z=>h('button',{onclick:()=>{pop.remove();pop=null;mark(bi,z);bubble(info.textContent,/\bok\b/.test(info.className)?'ok':/\bko\b/.test(info.className)?'ko':'',q)}},z)));M.box.append(pop);
+   pop.style.top=clamp(q.y+14,4,Math.max(4,hh-pop.offsetHeight-4))+'px'};
+  cleanup.push(attachTouch(M,{on,select:pickTouch}));
+  const zb=(t,lab,f)=>h('button',{type:'button','aria-label':lab,onclick:f},t);
+  M.box.classList.add('touchz');M.box.append(h('div',{class:'zctl'},zb('+','Zoomer',()=>M.zoomAt(M.zoom()*1.5)),zb('−','Dézoomer',()=>M.zoomAt(M.zoom()/1.5)),zb('1:1','Carte entière',()=>M.zoomAt(1)),zl));
+  document.body.classList.add('gc-survey');cleanup.push(()=>document.body.classList.remove('gc-survey'));
+  /* écran tactile étroit : après l'arrivée sur l'étape, faire remonter la carte juste assez pour qu'elle ne soit pas sous la barre d'onglets */
+  if(matchMedia('(pointer: coarse)').matches)setTimeout(()=>{const r=M.box.getBoundingClientRect(),tabs=document.querySelector('.tabs'),tb=tabs&&getComputedStyle(tabs).display!=='none'?tabs.getBoundingClientRect().height:0,bot=innerHeight-tb-8;const y=scrollY,tg=Math.max(0,Math.min(r.bottom+y-bot,r.top+y-70));if(r.bottom>bot||y>tg)window.scrollTo({top:tg,behavior:'instant'})},60);   // position absolue : interrompt le défilement doux vers le haut lancé par render()
   const btn=h('button',{class:'btn',onclick:()=>{S.step=4;render()}},'Passer au papier →');
-  view.append(stepper(),coach('Place la bande de papier le long de A–B : <b>touche chaque point où le trait coupe une courbe</b> (cercles bleus). Les altitudes se déduisent des courbes maîtresses cotées et de l\'équidistance de <b>'+S.eq+' m</b>.'),M.box,h('p',{},prog),sw,info,h('div',{class:'tools'},h('button',{class:'btn sec sm',onclick:()=>{S.hints+=3;S.revealed=true;toast('Intersections révélées (−3 pts)');M.draw()}},'💡 Indice : montrer les intersections'),h('button',{class:'btn ghost sm',onclick:()=>{S.step=2;render()}},'← Changer le trait'),h('span',{class:'sp'}),btn));upd()}
+  view.append(stepper(),coach('Place la bande de papier le long de A–B : <b>touche chaque point où le trait coupe une courbe</b> (cercles bleus). Les altitudes se déduisent des courbes maîtresses cotées et de l\'équidistance de <b>'+S.eq+' m</b>.'),M.box,h('p',{class:'mute touchhint'},'📱 Deux doigts : zoomer et déplacer la carte · doigt maintenu : loupe de précision.'),h('p',{},prog),sw,info,h('div',{class:'tools'},h('button',{class:'btn sec sm',onclick:()=>{S.hints+=3;S.revealed=true;toast('Intersections révélées (−3 pts)');M.draw()}},'💡 Indice : montrer les intersections'),h('button',{class:'btn ghost sm',onclick:()=>{S.step=2;render()}},'← Changer le trait'),h('span',{class:'sp'}),btn));upd()}
 
  /* ---------- étape 4 : papier ---------- */
  const ev=()=>hs()/S.vm;

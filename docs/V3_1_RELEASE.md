@@ -1,6 +1,6 @@
 # GéoCarto v3.1 — candidat à la livraison (RC1) et liste de contrôle
 
-> Version 1.2 · 2026-10-26 · `3.1.0-rc.3` (rc.3 = rc.2 + sécurité et publication, § 8 ; interface identique). Précédemment `3.1.0-rc.2` (RC2 = RC1 + finition de projection des leçons de topographie, voir § 7). Contenu pédagogique rédigé par la machine : **brouillon à relire par un géologue** (porte de livraison G3 ci-dessous).
+> Version 1.3 · 2026-10-26 · `3.1.0-rc.4` (rc.4 = rc.3 + lecture tactile du simulateur de profil, § 9 ; bureau et leçons Stage identiques). Précédemment `3.1.0-rc.3` (RC2 = RC1 + finition de projection des leçons de topographie, voir § 7). Contenu pédagogique rédigé par la machine : **brouillon à relire par un géologue** (porte de livraison G3 ci-dessous).
 
 ## 1. Ce que contient la RC1
 Leçons Stage « Cartes géologiques » (15 scènes), « Coupes géologiques » (12 scènes) et préalable « Lire le relief » (3 votes) ; votes mélangés ; fil du raisonnement ; options figurées ; palette de projection ; vue présentateur avec malentendu dominant ; outil d'audit `npm run audit:geology`. Détail : [V3_1_REVIEW.md](V3_1_REVIEW.md), plan et journal : [V3_1_PLAN.md](V3_1_PLAN.md).
@@ -35,7 +35,7 @@ Ne fusionner #1 que si la CI est verte (elle teste `dist/app.js` reproductible).
 3. [ ] **Changer le code enseignant** (M6), vérifier qu'il n'apparaît dans aucun document partagé ; décider d'une licence (code : MIT/Apache ; contenu : CC-BY, après vérification des droits des figures).
 4. [ ] G3 : un relecteur nommé signe `docs/V3_1_REVIEW.md` §1 (date, nom, corrections). Retirer ou conserver la mention « brouillon automatique » selon son avis.
 5. [ ] G4 et G5 dans la salle.
-6. [ ] Passer `package.json` de `3.1.0-rc.3` à `3.1.0` ; étiqueter `v3.1.0` ; notes de version = résumé de la revue.
+6. [ ] Passer `package.json` de `3.1.0-rc.4` à `3.1.0` ; étiqueter `v3.1.0` ; notes de version = résumé de la revue.
 7. [ ] Activer GitHub Pages sur `main` (racine) ; ouvrir l'URL publique en navigation privée ; vérifier `#/stage/prereq`, `#/stage/geocarte`, `#/stage/coupe`, `#/stage/fil`.
 8. [ ] Sauvegarde : archive du dépôt (ou bundle) + export Zenodo si le contenu est ouvert (DOI).
 9. [ ] Ouvrir les tickets « v3.2 » issus de la revue (relecture, essai instrumenté, D « Histoire d'une carte », dette F7/F9, audit en CI).
@@ -65,3 +65,13 @@ Aucune fonction nouvelle (la v3.2 attend l'essai en classe) ; uniquement des dé
 - **Droits** : `COPYRIGHT.txt`, `CREDITS.txt` (illustrations tierces : droits à leurs détenteurs, vérification en cours), `THIRD-PARTY-LICENSES.txt` publiés avec le site ; inventaire `docs/IMAGE_SOURCES.md` ; balises `robots noindex` + `robots.txt`.
 - **Publication** : seul `site/` est publié (`tools/make-site.sh`), par le workflow **manuel** `.github/workflows/pages.yml` (tests, build reproductible, contrôle « aucun fichier source » avant publication).
 - **Mesures** : 185 tests ; porte de projection depuis `site/` : 10 leçons, 0 défaut ; `js/`, `README.md`, `docs/` → 404 sur le site.
+
+## 9. rc.4 — simulateur de profil sur smartphone (2026-10-26)
+**Problème signalé** : à l'étape « Relevé », la carte fait ~360 × 250 px sur un téléphone ; les courbes peuvent être à 3–4 px les unes des autres et le pincement du navigateur est bloqué par la carte (nécessaire aux glisser-déposer de l'étape précédente). Lecture des altitudes et choix du bon point imprécis.
+**Correctif, tactile uniquement** (souris et stylet inchangés) :
+- **Zoom ×1 à ×4** : pincement à deux doigts, déplacement à un doigt, boutons + / − / 1:1 (≥ 44 px) ; la carte est **redessinée** au zoom (traits et cotes nets).
+- **Loupe** ×3 sur appui maintenu, à côté du doigt, avec réticule ; lâcher = sélection précise.
+- **Cibles ≥ 44 px** au doigt ; si deux courbes sont trop proches pour être distinguées, un message invite à zoomer ou à utiliser la loupe au lieu de choisir au hasard.
+- **Bulle de retour** près du point touché (même message que sous la carte), menu des altitudes ajusté à l'écran ; bouton de l'assistant masqué et carte remontée au-dessus de la barre d'onglets pendant cette étape.
+- **Pédagogie préservée** : aucun geste ne révèle d'altitude ; l'élève choisit toujours l'altitude lui-même ; les tolérances par mode restent les mêmes (seul le minimum tactile est relevé, compensé par le zoom).
+**Vérification** : bureau — rendu des étapes 2 et 3 et résultats des clics **identiques au pixel** à `main` (graine fixe, modes débutant et intermédiaire) ; téléphone (iPhone 13, Pixel 7, événements tactiles réels via le protocole Chrome) — pincement ×3,7, déplacement, loupe et sélection précise, sélection fiable une fois zoomé, aucune erreur ; 191 tests (6 nouveaux sur les gestes, vérifiés par mutation) ; `js/stage/` et `css/stage.css` inchangés.

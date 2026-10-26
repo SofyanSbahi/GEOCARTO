@@ -119,3 +119,17 @@ html.rm *{animation:none!important;transition:none!important}
 #printsheet{display:none}
 @media print{body>*:not(#printsheet){display:none!important}#printsheet{display:block;padding:10mm}}
 @media(max-width:420px){.brand span{display:none}.top{gap:6px;padding:0 8px}.icon{padding:6px 7px}}
+/* Simulateur de profil, étape « Relevé » — tactile uniquement (rc.4) : commandes de zoom, loupe, bulle de retour. Rien ne change au pointeur fin (souris). */
+.zctl,.touchhint{display:none}
+.cvw .loupe{position:absolute;width:132px;height:132px;border-radius:50%;border:3px solid var(--pri);box-shadow:0 6px 18px #0006;pointer-events:none;z-index:6;background:var(--paper)}
+.cvw .tapfb{position:absolute;z-index:7;max-width:210px;padding:5px 9px;border-radius:12px;background:var(--card);color:var(--ink);border:2px solid var(--pri);box-shadow:var(--sh);font:600 .8rem/1.3 system-ui,sans-serif;pointer-events:none}
+.cvw .tapfb.ok{border-color:var(--ok)}.cvw .tapfb.ko{border-color:var(--ko)}
+.cvw.touchz canvas{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+@media (pointer:coarse){
+ .touchhint{display:block;margin:.4rem 0 0;font-size:.85rem}
+ .zctl{display:flex;position:absolute;left:6px;top:6px;gap:6px;z-index:5;align-items:center}
+ .zctl button{min-width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);font:800 1.1rem system-ui,sans-serif}
+ .zctl .zl{padding:2px 8px;border-radius:10px;background:var(--card);font:800 .85rem system-ui,sans-serif;border:2px solid var(--line)}
+ .cvw .pop{max-width:calc(100% - 8px)}
+}
+@media (pointer:coarse) and (max-width:899px){body.gc-survey .fab{display:none}}
