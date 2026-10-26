@@ -1,0 +1,48 @@
+import {h,fr,fitCanvas,pick} from '../core/util.js';
+import {makeDem,demFromForm,FORMS,TYPES,autoEq,sample,gradient,slopePct,profileAlong} from '../core/terrain.js';
+import {drawMap,drawIso} from '../core/draw.js';
+import {createViewer} from '../core/scene3d.js';
+import {shared} from '../core/shared.js';
+import {misc} from '../core/store.js';
+import {slopeClass} from '../widgets/basic.js';
+import {mountWidgets} from './course.js';
+const hub=()=>`<h1>🧪 Laboratoires</h1><p class="lead">Manipule, observe, comprends.</p><div class="grid g2">
+<a class="node acc" href="#/stage/courbes"><span class="dot">🎞️</span><span><b>Mode Stage · projection (nouveau)</b><small>Courbes de niveau en plein écran, lisible depuis le dernier rang</small></span></a>
+<a class="node tool" href="#/labo/courbes"><span class="dot">🟤</span><span><b>Courbes de niveau interactives</b><small>Altitude, équidistance, pente, forme : mise à jour instantanée</small></span></a>
+<a class="node blue" href="#/labo/relief"><span class="dot">🏔️</span><span><b>Générateur de reliefs 3D</b><small>Montagne, vallée, volcan… paramètres, rotation, zoom</small></span></a>
+<a class="node tool" href="#/labo/pente"><span class="dot">📐</span><span><b>Simulateur de pente</b><small>H, D → %, degrés, interprétation animée</small></span></a>
+<a class="node blue" href="#/labo/atlas"><span class="dot">🗺️</span><span><b>Atlas des formes</b><small>Carte + bloc 3D de chaque forme</small></span></a>
+<a class="node" href="#/terrain"><span class="dot">🌄</span><span><b>Terrain virtuel</b><small>Marche dans le paysage et repère les formes</small></span></a>
+<a class="node" href="#/inverse"><span class="dot">🔄</span><span><b>Construction inverse</b><small>Relief ↔ courbes ↔ profil</small></span></a></div>`;
+export default async function(root,{id,a}){
+ if(!a){root.innerHTML=hub();return}
+ if(a==='pente'||a==='atlas'){root.innerHTML=`<div class="crumb"><a href="#/labos">Labos</a></div><h1>${a==='pente'?'📐 Simulateur de pente':'🗺️ Atlas des formes'}</h1><div class="widget" data-w="${a}"></div>${a==='pente'?'<div class="widget" data-w="slopeshapes"></div>':''}`;return mountWidgets(root)}
+ if(a==='courbes')return contourLab(root);if(a==='relief')return reliefLab(root);root.innerHTML=hub()}
+function contourLab(root){const S={form:'colline',relief:400,base:200,slope:1,eq:20,rot:0,shade:true,tint:false,rivers:false,crest:false};
+ root.innerHTML=`<div class="crumb"><a href="#/labos">Labos</a></div><div class="row"><h1 style="margin-right:auto">🟤 Courbes de niveau interactives</h1><a class="btn acc" href="#/stage/courbes">🎞️ Mode Stage (projection)</a></div><div class="grid g2"><div><div class="cvw"><canvas id="m"></canvas></div><div class="fb" id="rd">Touche la carte pour mesurer altitude et pente.</div></div><div><div class="cvw" style="background:#e8f0f4"><canvas id="i"></canvas></div><div class="ctrl"><label>Rotation 3D <input type="range" id="rot" min="0" max="360" value="35"></label></div></div></div>
+ <div class="card"><div class="ctrl"><label>Forme <select id="f">${Object.entries(FORMS).map(([k,v])=>`<option value="${k}">${v.nom}</option>`).join('')}<option value="mixte">Relief mixte (aléatoire)</option></select></label><label>Dénivelée <input type="range" id="relief" min="60" max="1200" step="20" value="400"> <b id="rv"></b></label><label>Altitude de base <input type="range" id="base" min="0" max="2000" step="50" value="200"> <b id="bv"></b></label><label>Pente (raideur) <input type="range" id="slope" min="0.4" max="2" step="0.1" value="1"> <b id="sv"></b></label><label>Équidistance <select id="eq"><option>5</option><option>10</option><option selected>20</option><option>25</option><option>50</option><option>100</option></select> m</label></div>
+ <div class="ctrl"><label><input type="checkbox" id="shade" checked> Estompage</label><label><input type="checkbox" id="tint"> Hypsométrie</label><label><input type="checkbox" id="rivers"> Talwegs</label><label><input type="checkbox" id="crest"> Crêtes</label><button class="btn sm sec" id="rnd">🎲 Relief mixte</button></div></div>
+ <div class="box tip"><b class="t">Expériences à tenter</b>Passe l'équidistance de 20 à 100 m : que perds-tu ? Augmente la pente : que deviennent les courbes ? Choisis « Col » puis « Vallée » et compare les V.</div>`;
+ const q=s=>root.querySelector(s);let dem,seed=1,pend=0;
+ const build=()=>{dem=S.form==='mixte'?makeDem({type:'complexe',seed,base:S.base,relief:S.relief,slope:S.slope}):demFromForm(S.form,{base:S.base,relief:S.relief,slope:S.slope});draw()};
+ const draw=()=>{const w=q('#m').parentNode.clientWidth||400,hh=w*(dem.H-1)/(dem.W-1);const c=fitCanvas(q('#m'),w,hh);drawMap(c,dem,w,hh,{eq:S.eq,shade:S.shade,tint:S.tint,rivers:S.rivers,crest:S.crest,spots:true});
+  const c2=fitCanvas(q('#i'),w,hh);c2.fillStyle='#e8f0f4';c2.fillRect(0,0,w,hh);drawIso(c2,dem,w,hh,{rot:+q('#rot').value,tilt:50,vex:2,eq:S.eq});q('#rv').textContent=S.relief+' m';q('#bv').textContent=S.base+' m';q('#sv').textContent=S.slope.toFixed(1)};
+ root.addEventListener('input',e=>{const t=e.target;if(t.id==='f')S.form=t.value;else if(['relief','base','slope'].includes(t.id))S[t.id]=+t.value;else if(t.id==='eq')S.eq=+t.value;else if(['shade','tint','rivers','crest'].includes(t.id))S[t.id]=t.checked;
+  if(t.id==='rot'||['eq','shade','tint','rivers','crest'].includes(t.id))draw();else{cancelAnimationFrame(pend);pend=requestAnimationFrame(build)}});
+ q('#rnd').onclick=()=>{seed=Math.floor(Math.random()*1e5);q('#f').value=S.form='mixte';build()};
+ q('#m').addEventListener('pointerdown',e=>{const r=q('#m').getBoundingClientRect(),i=(e.clientX-r.left)/r.width*(dem.W-1),j=(e.clientY-r.top)/r.height*(dem.H-1),z=sample(dem,i,j),p=slopePct(dem,i,j),ec=p>0?S.eq/p*100:Infinity,c=slopeClass(p);
+  q('#rd').innerHTML=`z ≈ <b>${fr(z,0)} m</b> · pente <b>${fr(p,0)} %</b> (${fr(Math.atan(p/100)*180/Math.PI,0)}°) · écartement local ≈ ${isFinite(ec)?fr(ec,0)+' m ('+fr(ec/(dem.scaleN/100),2)+' cm sur la carte)':'∞'} → ${c[0]} : ${p>25?'courbes très serrées':p<8?'courbes espacées':'courbes moyennement serrées'}.`;shared.probe={z,slope:p,eq:S.eq,ecart:ec,scaleN:dem.scaleN}});
+ const ro=new ResizeObserver(draw);build();ro.observe(q('#m').parentNode);return()=>{ro.disconnect();cancelAnimationFrame(pend)}}
+function reliefLab(root){const hd=shared.handoff;let seed=hd?hd.opts.seed:7;const S={type:hd?hd.opts.type:'montagne',base:300,relief:600,slope:1.1,rough:.3,valleys:.6,peaks:3,rivers:true,vex:2.2};
+ root.innerHTML=`<div class="crumb"><a href="#/labos">Labos</a></div><h1>🏔️ Générateur de reliefs 3D</h1><div class="cvw" style="height:min(62vh,520px);line-height:0;background:#cfe3ee"><div id="v" style="width:100%;height:100%"></div></div><p class="mute" style="margin:6px 0">Glisse pour tourner, pince/molette pour zoomer, deux doigts (ou clic droit) pour déplacer.</p>
+ <div class="card"><div class="ctrl"><label>Type <select id="type">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${k===S.type?'selected':''}>${v}</option>`).join('')}</select></label><button class="btn sm acc" id="rnd">🎲 Nouveau terrain</button><label>Surface <select id="mode"><option value="both">Courbes + couleurs</option><option value="contour">Courbes seules</option><option value="tint">Couleurs seules</option></select></label></div>
+ <div class="ctrl"><label>Altitude de base <input type="range" id="base" min="0" max="2500" step="50" value="300"></label><label>Dénivelée <input type="range" id="relief" min="100" max="1500" step="50" value="600"></label><label>Pente <input type="range" id="slope" min="0.5" max="2" step="0.1" value="1.1"></label><label>Rugosité <input type="range" id="rough" min="0" max="1" step="0.05" value="0.3"></label><label>Densité des vallées <input type="range" id="valleys" min="0" max="1" step="0.05" value="0.6"></label><label>Sommets <input type="range" id="peaks" min="1" max="7" value="3"></label></div>
+ <div class="ctrl"><label>Exagération verticale ×<input type="range" id="vex" min="1" max="5" step="0.2" value="2.2"></label><label>Niveau de l'eau <input type="range" id="water" min="0" max="100" value="0"></label><label><input type="checkbox" id="rivers"> Talwegs</label><label><input type="checkbox" id="ridges"> Lignes de crête</label>${hd?'<label><input type="checkbox" id="line" checked> Mon trait A–B</label>':''}</div><small id="code" class="mute"></small></div>${hd?'<div class="row"><a class="btn acc" href="#/profil">✏️ Retourner faire le profil</a></div>':''}`;
+ const q=s=>root.querySelector(s);let V,t,eq;const mk=()=>{const d=makeDem({...S,seed,scaleN:hd?hd.opts.scaleN:25000});eq=autoEq(d);q('#code').textContent=`Code : ${S.type}-${seed.toString(36)}`;return d};
+ V=createViewer(q('#v'),mk(),{eq:20});V.eq=eq;V.rivers=false;misc('viewer3d',0);
+ const wl=()=>{const p=+q('#water').value;V.setWater(p?V.dem.zmin+(V.dem.zmax-V.dem.zmin)*p/100:null)};
+ const rebuild=()=>{const d=mk();V.waterLevel=null;V.setDem(d);V.eq=eq;V.setMode(V.mode,eq);wl()};
+ root.addEventListener('input',e=>{const i=e.target.id;if(['base','relief','slope','rough','valleys','peaks'].includes(i)){S[i]=+e.target.value;clearTimeout(t);t=setTimeout(rebuild,90)}else if(i==='type'){S.type=e.target.value;rebuild()}else if(i==='vex')V.setVex(+e.target.value);else if(i==='water')wl();else if(i==='mode')V.setMode(e.target.value,eq);else if(i==='rivers'||i==='ridges')V.set(i,e.target.checked);else if(i==='line'){V.set('line',e.target.checked?{A:hd.A,B:hd.B}:null)}});
+ q('#rnd').onclick=()=>{seed=Math.floor(Math.random()*1e6);rebuild()};
+ if(hd){V.show.line={A:hd.A,B:hd.B};V.rebuildOver()}
+ return()=>{clearTimeout(t);V.dispose();shared.handoff=null}}

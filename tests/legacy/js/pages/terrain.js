@@ -1,0 +1,42 @@
+/* Terrain virtuel : marche en 3D, repérage des formes, puis profil */
+import {h,fr,fitCanvas,pick,shuffle,clamp} from '../core/util.js';
+import {makeDem,analyze,sample,autoEq,transformDem,crossings} from '../core/terrain.js';
+import {drawMap} from '../core/draw.js';
+import {createViewer} from '../core/scene3d.js';
+import {misc,skill,addXp} from '../core/store.js';
+import {shared} from '../core/shared.js';
+import {toast,confetti} from '../core/ui.js';
+export default async function(root){
+ let seed=Math.floor(Math.random()*1e6),type=pick(['montagne','vallee','volcan','complexe','bassin']),dem,an,eq,V,done=[false,false,false,false,false],mode='orbit',AB=[];
+ root.innerHTML=`<h1>🌄 Terrain virtuel</h1><div class="cvw" id="box" style="height:min(66vh,560px);background:#cfe3ee;line-height:0;touch-action:none"><div id="v" style="width:100%;height:100%"></div><div class="hud"><span class="chip" id="alt">Altitude : –</span></div><canvas id="mini" style="position:absolute;right:8px;top:8px;border:2px solid #fff;border-radius:8px;z-index:3"></canvas><div class="joy" id="joy" hidden><i></i></div></div>
+ <div class="tools"><div class="seg" id="md"><button class="on" data-m="orbit">🛰️ Vue d'ensemble</button><button data-m="walk">🚶 Marche</button></div><button class="btn sm sec" id="nw">🎲 Autre paysage</button><span class="mute" id="hint"></span></div>
+ <div class="card"><h3>Missions</h3><div id="ms"></div><div id="opts"></div></div>`;
+ const q=s=>root.querySelector(s);
+ const MS=['Touche le <b>sommet</b> le plus haut du paysage.','Touche un <b>talweg</b> (fond de vallée où l\'eau converge).','Touche un point de la <b>ligne de crête</b>.','<b>Prévois les courbes de niveau</b> : choisis la carte qui correspond à ce paysage.','Plante deux piquets <b>A</b> puis <b>B</b> (touche le terrain deux fois), puis trace le profil correspondant.'];
+ const cur=()=>done.findIndex(x=>!x);
+ const drawMs=()=>{q('#ms').innerHTML=MS.map((m,i)=>`<div class="mission ${done[i]?'done':i===cur()?'now':''}"><span>${done[i]?'✅':i===cur()?'👉':'⬜'}</span><span>${m}</span></div>`).join('');q('#opts').innerHTML='';if(cur()===3)quizMaps();if(cur()===4&&AB.length===2)q('#opts').innerHTML='<button class="btn acc" id="go">✏️ Dessiner le profil de A–B</button>',q('#go').onclick=()=>{shared.handoff={opts:{type,seed,scaleN:25000},A:AB[0],B:AB[1]};location.hash='#/profil'}};
+ const win=i=>{if(done[i])return;done[i]=true;misc('missions');skill('formes',true);addXp(12,'mission');confetti(20);drawMs()};
+ function quizMaps(){const alts=['fx','fy','r180'].map(m=>transformDem(dem,m)),opts=shuffle([{d:dem,ok:true},...alts.map(d=>({d,ok:false}))]);const box=h('div',{class:'opts-img'});
+  opts.forEach(o=>{const cv=h('canvas'),b=h('button',{class:'opt',onclick:()=>{box.querySelectorAll('.opt').forEach(x=>x.disabled=true);b.classList.add(o.ok?'ok':'ko');box.querySelectorAll('.opt').forEach((x,i)=>{if(opts[i].ok)x.classList.add('ok')});skill('formes',o.ok);if(o.ok)win(3);else{toast('Regarde l\'orientation : où est le sommet par rapport aux talwegs ?');setTimeout(()=>{done[3]=false;seed+=0;drawMs()},0)}}},cv);box.append(b);requestAnimationFrame(()=>{const w=cv.parentNode.clientWidth||160;drawMap(fitCanvas(cv,w,w*.69),o.d,w,w*.69,{eq,spots:false,rivers:false,labels:false,scaleBar:false,north:false,shade:true})})});q('#opts').append(h('p',{class:'mute'},'Compare avec le paysage : les distracteurs sont des symétries de la bonne carte.'),box)}
+ function load(){dem=makeDem({type,seed,scaleN:25000});an=analyze(dem);eq=autoEq(dem);if(V)V.dispose();V=createViewer(q('#v'),dem,{eq,mode:'both',vex:2});V.markers=[];done=[false,false,false,false,false];AB=[];V.rivers=true;mini();drawMs();
+  V.renderer.domElement.addEventListener('pointerup',onTap);V.renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};if(mode==='walk'&&!e.target.closest('#joy'))look={x:e.clientX,y:e.clientY}});V.renderer.domElement.addEventListener('pointermove',e=>{if(mode==='walk'&&look&&e.buttons){yaw+=(e.clientX-look.x)*.006;pitch=clamp(pitch-(e.clientY-look.y)*.005,-1,1);look={x:e.clientX,y:e.clientY}}});
+  V.onFrame=frame}
+ let down=null,look=null,yaw=0,pitch=-.15,pos={x:80,z:55},joy={x:0,y:0},keys={};
+ const mm=h('canvas'),mcv=()=>q('#mini');
+ function mini(){const w=130,hh=Math.round(w*(dem.H-1)/(dem.W-1)),c=fitCanvas(mcv(),w,hh);drawMap(c,dem,w,hh,{eq,rivers:false,spots:false,labels:false,scaleBar:false,north:false,shade:true});mm.width=mcv().width;mm.height=mcv().height;mm.getContext('2d').drawImage(mcv(),0,0)}
+ function onTap(e){if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>6){down=null;return}down=null;const hit=V.pick(e.clientX,e.clientY);if(!hit)return;const i=cur();const near=(mask,r)=>{for(let dj=-r;dj<=r;dj++)for(let di=-r;di<=r;di++){const x=Math.round(hit.i)+di,y=Math.round(hit.j)+dj;if(x>=0&&y>=0&&x<dem.W&&y<dem.H&&mask(y*dem.W+x))return true}return false};
+  if(i===0){const s=an.summits[0];if(s&&Math.hypot(s.x-hit.i,s.y-hit.j)<12)win(0);else toast(`Pas tout à fait : le sommet est le point le plus haut (z ≈ ${fr(hit.z,0)} m ici).`)}
+  else if(i===1){if(near(q=>an.river[q],4))win(1);else toast('Ce n\'est pas un talweg. Cherche une ligne basse où les versants convergent (active la vue : les rivières sont en bleu).')}
+  else if(i===2){const T=Math.max(30,an.thr*.7);if(near(q=>an.racc[q]>=T,4))win(2);else toast('La crête est la ligne la plus haute séparant deux versants.')}
+  else if(i===4){if(AB.length<2){AB.push({x:hit.i,y:hit.j});V.markers=AB.map((p,k)=>({x:p.x,y:p.y,color:k?0x2d86c8:0xd62d2d}));V.rebuildOver();if(AB.length===2){const c=crossings(dem,AB[0],AB[1],eq).length;if(c<5||Math.hypot(AB[0].x-AB[1].x,AB[0].y-AB[1].y)<40){toast('Trait trop court ou trop plat : replante les piquets plus loin.');AB=[];V.markers=[];V.rebuildOver()}else{win(4)}}else toast('Piquet A planté. Touche pour B.')}}}
+ function frame(){const hz=q('#alt');if(mode==='walk'){const sp=(keys.Shift?9:4)/60,f=(keys.ArrowUp||keys.w||keys.z?1:0)-(keys.ArrowDown||keys.s?1:0)-joy.y,r=(keys.ArrowRight||keys.d?1:0)-(keys.ArrowLeft||keys.a||keys.q?1:0)+joy.x;
+   pos.x=clamp(pos.x+(Math.sin(yaw)*f+Math.cos(yaw)*r)*sp*8,3,dem.W-4);pos.z=clamp(pos.z+(-Math.cos(yaw)*f+Math.sin(yaw)*r)*sp*8,3,dem.H-4);
+   if(keys.ArrowLeft&&0){}const z=sample(dem,pos.x,pos.z),cam=V.camera;cam.position.set(pos.x-(dem.W-1)/2,(z-dem.zmin)/dem.cellM*2+3.2,pos.z-(dem.H-1)/2);cam.lookAt(cam.position.x+Math.sin(yaw)*Math.cos(pitch),cam.position.y+Math.sin(pitch),cam.position.z-Math.cos(yaw)*Math.cos(pitch));hz.textContent=`Altitude : ${fr(z,0)} m`}
+  const c=mcv().getContext('2d'),d=window.devicePixelRatio||1;c.setTransform(1,0,0,1,0,0);c.drawImage(mm,0,0);c.setTransform(d>2.5?2.5:d,0,0,d>2.5?2.5:d,0,0);const k=130/(dem.W-1),px=mode==='walk'?pos.x:(V.camera.position.x+(dem.W-1)/2),pz=mode==='walk'?pos.z:(V.camera.position.z+(dem.H-1)/2);c.fillStyle='#d62d2d';c.beginPath();c.arc(clamp(px,0,dem.W)*k,clamp(pz,0,dem.H)*k,4,0,7);c.fill();AB.forEach((p,i)=>{c.fillStyle=i?'#2d86c8':'#d62d2d';c.fillRect(p.x*k-3,p.y*k-3,6,6)})}
+ const setMode=m=>{mode=m;V.controls.enabled=m==='orbit';q('#joy').hidden=m!=='walk'||!matchMedia('(pointer:coarse)').matches;q('#md').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));q('#hint').textContent=m==='walk'?'Glisse pour regarder · joystick / flèches ou WASD pour marcher':'';if(m==='walk'){pos={x:dem.W/2,z:dem.H*.8};yaw=0;pitch=-.15}else{V.camera.position.set(0,95,125);V.controls.target.set(0,8,0)}};
+ q('#md').onclick=e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.m)};
+ q('#nw').onclick=()=>{seed=Math.floor(Math.random()*1e6);type=pick(['montagne','vallee','volcan','complexe','bassin']);load();setMode('orbit')};
+ const j=q('#joy'),jm=e=>{const r=j.getBoundingClientRect(),x=(e.clientX-r.left-55)/45,y=(e.clientY-r.top-55)/45,l=Math.min(1,Math.hypot(x,y)),a=Math.atan2(y,x);joy={x:Math.cos(a)*l,y:-Math.sin(a)*l};j.firstChild.style.transform=`translate(${joy.x*30}px,${-joy.y*30}px)`};
+ j.addEventListener('pointerdown',e=>{j.setPointerCapture(e.pointerId);jm(e)});j.addEventListener('pointermove',e=>{if(e.buttons)jm(e)});j.addEventListener('pointerup',()=>{joy={x:0,y:0};j.firstChild.style.transform=''});
+ const kd=e=>{keys[e.key]=true},ku=e=>{keys[e.key]=false};addEventListener('keydown',kd);addEventListener('keyup',ku);
+ load();return()=>{removeEventListener('keydown',kd);removeEventListener('keyup',ku);V&&V.dispose()}}

@@ -1,7 +1,7 @@
 # GéoCarto 2 – cartographie topographique & profils
 
 Plateforme pédagogique statique conçue pour GitHub Pages. Elle se lance en **double-cliquant sur `index.html`** (file://), via localhost ou sur Pages : l'application est livrée en un bundle classique `dist/app.js`.
-Sources lisibles dans `js/` (ES modules) ; après modification, relancer `sh build.sh` (Node.js requis) pour régénérer `dist/app.js`. Three.js r160 est inclus (licence MIT, `vendor/`).
+Sources lisibles dans `js/` (ES modules) ; après modification, régénérer `dist/app.js` (voir « Développement et reproductibilité » ci-dessous). Three.js r160 est inclus (licence MIT, `vendor/`).
 
 ## Publication sur GitHub Pages
 1. Créer un dépôt et déposer **tout le contenu de ce dossier à la racine**.
@@ -11,7 +11,7 @@ Sources lisibles dans `js/` (ES modules) ; après modification, relancer `sh bui
 Test local : ouvrir `index.html`, ou `python3 -m http.server 8000`. **Déposer aussi le dossier `dist/`** (sinon l'application affiche un message d'erreur explicite).
 
 ## Mode Stage v2 — enseigner par la projection (`#/stage`)
-Cinq leçons en scènes lisibles depuis le dernier rang, sans zoom : **Échelle, Orientation, Coordonnées, Pente, Profil topographique** (construction point par point). Une idée par scène, révélation progressive, **votes avec malentendus nommés**, exercices du moteur avec minuteur, vue enseignant, test du dernier rang (touche `K`). Les thèmes 4, 5, 6 et 8 restent servis par le deck v1 ; la géologie est planifiée. Conception, règles de lisibilité, feuille de route : [docs/STAGE_PEDAGOGY.md](docs/STAGE_PEDAGOGY.md). Tests : `node --test tests/lessons.test.js` ; audit sur rendu réel : `python3 tools/stage/audit_lessons.py`.
+Cinq leçons en scènes lisibles depuis le dernier rang, sans zoom : **Échelle, Orientation, Coordonnées, Pente, Profil topographique** (construction point par point). Une idée par scène, révélation progressive, **votes avec malentendus nommés**, exercices du moteur avec minuteur, vue enseignant, test du dernier rang (touche `K`). Les thèmes 4, 5, 6 et 8 restent servis par le deck v1 ; la géologie est livrée avec Stage v4 (voir plus bas). Conception, règles de lisibilité, feuille de route : [docs/STAGE_PEDAGOGY.md](docs/STAGE_PEDAGOGY.md). Tests : `node --test tests/lessons.test.js` ; audit sur rendu réel : `python3 tools/stage/audit_lessons.py`.
 
 ## Mode Stage v1 (projection, preuve de concept)
 Mode plein écran pour projeter en salle/amphithéâtre, depuis le labo ou le chapitre « Courbes de niveau » (`#/stage/courbes`) : texte et étiquettes agrandis, figure au centre, projecteur, zoom, crayon, télécommande, réglage de la salle, vue présentateur (`V`, 2ᵉ fenêtre ; nécessite http/https). Voir `docs/STAGE_MODE.md` (mesures avant/après, plan de migration). Tests : `tools/stage/`. Le bundle se reconstruit avec `sh build.sh` (ou `esbuild` local).
@@ -37,7 +37,7 @@ Tout est stocké dans le navigateur (`localStorage`) : aucune donnée n'est envo
 
 ## Architecture v3 : moteurs, modèle pédagogique, expériences
 `js/engine/` contient les cinq moteurs (terrain, courbes, profil, géologie, pédagogie) : fonctions pures, testées sous Node, sans navigateur. Learning Mode (`pages/`, `widgets/`) et Stage Mode (`stage/`) sont deux **expériences** qui les appellent. Voir [docs/ENGINES.md](docs/ENGINES.md) et l'[ADR 0001](docs/adr/0001-engines-and-experiences.md).
-`npm test` lance 70 tests ; `python3 tools/e2e/compare_legacy.py` compare l'application au code d'origine.
+`npm test` lance la suite de tests (golden, contrat des moteurs, Stage ; 122 tests à la restauration du dépôt) ; `python3 tools/e2e/compare_legacy.py` compare l'application au code d'origine.
 
 
 ## Stage v3 — système de cours
@@ -45,3 +45,14 @@ Prologue « la mission » (un terrain pour toute la séance), budget d'attention
 
 ## Stage v4 — géologie et outils d'enseignement
 Leçons **Cartes géologiques** (`#/stage/geocarte`) et **Coupes géologiques** (`#/stage/coupe`), instruction par les pairs (vote → discussion → revote : touche **R**), **bibliothèque des malentendus** (`#/stage/lib`), **bilan de séance** (`#/stage/bilan`, export JSON/CSV, données locales). Classement des prochaines directions : `docs/STAGE_LECTURE.md` §8.
+
+## Développement et reproductibilité
+Prérequis : Node.js ≥ 22. Le bundle `dist/app.js` est **reproductible** : esbuild est épinglé (0.28.2, `package-lock.json`).
+```sh
+npm ci                # installe l'outillage exact
+npm test              # 122 tests (golden, contrat des moteurs, Stage)
+npm run build         # régénère dist/app.js depuis js/main.js
+npm run check:dist    # reconstruit et échoue si dist/app.js diffère du fichier versionné
+```
+Règle : toute modification de `js/` ou de `vendor/` doit être livrée **avec** le `dist/app.js` régénéré (GitHub Pages sert `dist/` tel quel). L'intégration continue (`.github/workflows/ci.yml`) échoue si le bundle versionné ne correspond pas aux sources.
+Les références de non-régression sont dans `tests/golden/` ; `tests/legacy/` conserve le code d'origine pour les régénérer (`npm run golden`, uniquement pour figer un comportement voulu). Les scripts navigateur de `tools/` (Python + Playwright) s'exécutent contre un serveur local (`python3 -m http.server 8765`).

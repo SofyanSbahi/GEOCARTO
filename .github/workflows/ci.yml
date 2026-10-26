@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-reproducible-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install pinned toolchain
+        run: npm ci
+
+      - name: Unit, golden and contract tests
+        run: npm test
+
+      # dist/app.js est versionné (GitHub Pages le sert tel quel) : il doit être
+      # exactement ce que produisent les sources avec l'esbuild épinglé.
+      - name: dist/app.js matches a fresh build
+        run: npm run check:dist

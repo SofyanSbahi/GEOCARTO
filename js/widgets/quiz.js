@@ -1,0 +1,11 @@
+import {h,shuffle} from '../core/util.js';
+import {BANK} from '../data/quizbank.js';
+import {skill,chapterQuiz,addXp} from '../core/store.js';
+import {CH} from '../data/chapters.js';
+import {W} from './basic.js';
+import {confetti} from '../core/ui.js';
+W.quiz=(el)=>{const id=el.dataset.bank,n=+el.dataset.n||8;const run=()=>{el.innerHTML=`<h3><span class="tag">Quiz</span>Teste-toi</h3>`;const qs=shuffle(BANK[id]||[]).slice(0,n);if(!qs.length){el.innerHTML='<p class="mute">Pas de quiz pour ce chapitre.</p>';return}let ok=0,done=0;
+ qs.forEach((q,qi)=>{const idx=shuffle(q.o.map((_,i)=>i)),d=h('div',{class:'q'},h('p',{},`${qi+1}. ${q.q}`),...idx.map(i=>h('button',{class:'opt',onclick:ev=>{const b=ev.currentTarget;d.querySelectorAll('.opt').forEach(x=>x.disabled=true);const good=i===q.a;d.querySelectorAll('.opt').forEach((x,k)=>{if(idx[k]===q.a)x.classList.add('ok')});if(!good)b.classList.add('ko');else ok++;skill(CH[id]?CH[id].skill:'courbes',good);d.querySelector('.exp').textContent=(good?'✅ ':'❌ ')+q.e;done++;
+   if(done===qs.length){const s=ok/qs.length;chapterQuiz(id,s);res.innerHTML=`Score : ${ok}/${qs.length} (${Math.round(s*100)} %) ${s>=.8?'🎉 Excellent !':s>=.6?'👍 Validé':'📚 Relis le cours et recommence'} `;res.append(h('button',{class:'btn sm',onclick:run},'↻ Nouveau quiz'));if(s>=.8)confetti(30)}}},q.o[i])),h('div',{class:'exp'}));el.append(d)});
+ const res=h('div',{class:'score'});el.append(res)};run()};
+export {W};
