@@ -73,6 +73,38 @@ export function fit(label, W, size0, maxLines = 2) {
   for (let s = size0 * K.fs; s >= MIN - 1e-9; s -= .2) { const chars = Math.max(4, Math.floor(W / (s * .6))), lines = wrap(label, chars); if (lines.length <= maxLines && lines.every(l => l.length <= chars)) return { lines, size: s }; }
   return { lines: wrap(label, Math.floor(W / (MIN * .6))), size: MIN };
 }
+/* idem, mais le bloc doit aussi tenir dans une HAUTEUR H (unités logiques) : lignes × taille × interligne ≤ H. Sans cela, quand la salle ou le format
+   (4:3) agrandit le texte, il déborde de sa carte ou de son bandeau (audit v3.1 : « Sont verticaux » coupé, bulles recouvrant les schémas).
+   Retombe sur MIN, jamais en dessous. */
+export function fitBox(label, W, H, size0, maxLines = 2, lh = 1.16) {
+  for (let s = size0 * K.fs; s >= MIN - 1e-9; s -= .2) {
+    const chars = Math.max(4, Math.floor(W / (s * .6))), lines = wrap(label, chars);
+    if (lines.length <= maxLines && lines.every(l => l.length <= chars) && lines.length * s * lh <= H) return { lines, size: s };
+  }
+  return { lines: wrap(label, Math.floor(W / (MIN * .6))), size: MIN };
+}
+/* géométrie d'une étiquette `tag` (mêmes formules) et écartement vertical des étiquettes qui se chevauchent : items = [{ x, y, s, o }] → y corrigés
+   (même ordre). Ne bouge que le strict nécessaire ; au plus 6 passes. */
+export function tagBox(x, y, s, o = {}) {
+  const size = Math.max(MIN, o.size || 4) * K.fs, w = s.length * size * .6 + 4, h = size * 1.5, ax = o.anchor || 'middle';
+  return { x0: ax === 'start' ? x : ax === 'end' ? x - w : x - w / 2, y0: y - h / 2, w, h };
+}
+export function declutter(items, gap = .6) {
+  const ys = items.map(i => i.y), idx = items.map((_, i) => i).sort((a, b) => ys[a] - ys[b]);
+  for (let pass = 0; pass < 6; pass++) {
+    let moved = false;
+    for (let a = 0; a < idx.length; a++) for (let b = a + 1; b < idx.length; b++) {
+      const ia = idx[a], ib = idx[b], A = tagBox(items[ia].x, ys[ia], items[ia].s, items[ia].o), B = tagBox(items[ib].x, ys[ib], items[ib].s, items[ib].o);
+      const ox = Math.min(A.x0 + A.w, B.x0 + B.w) - Math.max(A.x0, B.x0), oy = Math.min(A.y0 + A.h, B.y0 + B.h) - Math.max(A.y0, B.y0);
+      if (ox > 0 && oy > -gap) { const push = (oy + gap) / 2, up = ys[ia] <= ys[ib]; ys[ia] += up ? -push : push; ys[ib] += up ? push : -push; moved = true; }
+    }
+    if (!moved) break;
+  }
+  return ys;
+}
+/* hauteur d'un bandeau d'énoncé à 2 lignes au bas d'une figure, à la taille de salle courante (5,4 u de base : 17 u à l'échelle 1).
+   Les schémas placés au-dessus doivent lui laisser cette place (voir SEC dans coupe.js). */
+export const calloutH = (lines = 2, size = 5.4) => lines * size * K.fs * 1.28 + 3.2;
 export const svgWrap = inner => `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img">${inner}</svg>`;
 
 /* échelle linéaire */

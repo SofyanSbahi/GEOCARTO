@@ -60,8 +60,10 @@ export function azArrow(x, y, az, L, o = {}) { const R = Math.PI / 180; return a
 
 /* petit cadre de texte plein : UN seul point focal quelle que soit sa longueur (le texte intérieur n'est pas focal) */
 export function callout(x, y, label, o = {}) {
-  const w = o.w || 50, f = K.fit(label, w - 4, o.size || 5.4, o.lines || 3), lh = f.size * 1.28, h = f.lines.length * lh + 3.2;
-  y = Math.min(Math.max(y, h / 2 + 1), 69 - h / 2);
+  /* o.top : la bulle ne doit pas monter au-dessus de cette ordonnée (ex. sous une légende) ; o.maxH : hauteur maximale.
+     Le texte rétrécit (jamais sous MIN) pour tenir dans la bande au lieu de déborder sur la figure. */
+  const w = o.w || 50, top = o.top || 0, maxH = Math.min(o.maxH || 99, 69 - top), f = K.fitBox(label, w - 4, maxH - 3.2, o.size || 5.4, o.lines || 3, 1.28), lh = f.size * 1.28, h = f.lines.length * lh + 3.2;
+  y = Math.min(Math.max(y, h / 2 + 1, top + h / 2), 69 - h / 2);
   return rect(x - w / 2, y - h / 2, w, h, { fill: o.fill || C.ink, rx: 2, cls: 'fp' }) + K.txtL(x, y - (f.lines.length - 1) * lh / 2, f.lines, { size: f.size, lh, fill: o.color || '#fff', halo: false, w: 800, fixed: true });
 }
 /* sens du pendage en toutes lettres : « vers l’Est » */

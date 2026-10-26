@@ -12,6 +12,8 @@ const { C, txt, line, rect, circ, path, poly, arrow, at, badge, tag } = K;
 extras.geo = missionGeo;
 
 const CX = 132;                                   // centre de la colonne de droite (x 107 → 157)
+/* bulle de la colonne de droite, sous la légende (qui occupe y < 39,5) : elle ne monte jamais au-dessus de y = 41 ; son texte rétrécit au besoin */
+const callCol = (label, o = {}) => callout(CX, 57, label, { top: 41, ...o });
 const RAD = Math.PI / 180;
 /* intersection d'une droite (P + t·s) avec le rectangle du MNT, en coordonnées MNT */
 function clipRay(P, s, W, H) {
@@ -42,11 +44,19 @@ function loupe(M, T, box, o = {}) {
     wrap: (mapInner, overlay) => K.el('clipPath', { id }, rect(box.x, box.y, box.w, box.h)) + K.el('g', { 'clip-path': `url(#${id})` }, K.el('g', { transform: `translate(${tx} ${ty}) scale(${k})` }, mapInner) + overlay) + rect(box.x, box.y, box.w, box.h, { fill: 'none', stroke: C.ink, w: .6 }) };
 }
 /* barre d'échelle : la plus grande longueur « ronde » qui tient dans 32 unités */
-function scaleBar(d, k, box) {
-  const u = 1 / d.cellM * box.w / (d.W - 1) * k, m = [1000, 500, 200, 100].find(v => v * u <= 32) || 100, L = m * u, x = box.x + 4, y = box.y + box.h - 4;
+function scaleBar(d, k, box, avoid) {
+  const u = 1 / d.cellM * box.w / (d.W - 1) * k, m = [1000, 500, 200, 100].find(v => v * u <= 32) || 100, L = m * u, y = box.y + box.h - 4;
+  /* avoid : points de la carte à ne pas recouvrir (les trois points) — la barre passe dans le coin du bas le plus éloigné d'eux */
+  const right = avoid && avoid.length && avoid.reduce((a, q) => a + q[0], 0) / avoid.length < box.x + box.w / 2, x = right ? box.x + box.w - 4 - L : box.x + 4;
   return line(x, y, x + L, y, { c: C.ink, w: 1.1 }) + txt(x + L / 2, y - 3.2, m >= 1000 ? '1 km' : m + ' m', { size: 3.8, w: 800 });
 }
 const tagSide = (L, q, z, dy = 0, fill = C.blue, size = 4.6, left = false) => { return tag(q[0] + (left ? -3 : 3), q[1] + dy, z, { size, anchor: left ? 'end' : 'start', fill }); };
+/* trois étiquettes d'altitude (au-dessus / à côté / au-dessous du point), puis écartées si elles se chevauchent : à forte échelle de salle ou en 4:3
+   le texte grossit et « 477 m » recouvrait « 876 m » (audit v3.1) */
+function threeTags(pts, labels, dy, fills, size) {
+  const spec = pts.map((q, i) => ({ x: q[0] + (i === 1 ? -3 : 3), y: q[1] + (i === 1 ? 0 : i === 0 ? dy : -dy), s: labels[i], o: { size, anchor: i === 1 ? 'end' : 'start' } })), ys = K.declutter(spec);
+  return spec.map((a, i) => tag(a.x, ys[i], a.s, { size, anchor: a.o.anchor, fill: fills[i] })).join('');
+}
 /* triangle du pendage : Δz vertical, d horizontal, angle δ (dessiné à l'échelle du rapport Δz/d) */
 function dipTriangle(T, X, x0, y0, bw) {
   const bh = bw * T.dz / T.d, a = Math.atan2(bh, bw);
@@ -90,21 +100,21 @@ export const geocarte = {
           o += at(st, 2, circ(lo[0], lo[1], 1.6, { fill: '#fff', stroke: C.ink, w: .7 }) + circ(hi[0], hi[1], 1.6, { fill: '#fff', stroke: C.ink, w: .7 }) +
             tag(lo[0] + 3, lo[1] - 4, `${X.nf(W.e.lo.z, 0)} m`, { size: 4.6, anchor: 'start', fill: C.blue }) + tag(hi[0] + 3, hi[1] + 4, `${X.nf(W.e.hi.z, 0)} m`, { size: 4.6, anchor: 'start', fill: C.blue }), { rest: st > 2 });
         }
-        o += st === 1 ? at(st, 1, callout(CX, 57, X.t('geocarte.legende.t1'))) : st === 2 ? at(st, 2, callout(CX, 57, X.t('geocarte.legende.t2'), { fill: C.acc })) : st === 3 ? at(st, 3, callout(CX, 57, X.t('geocarte.legende.t3'), { fill: C.pri })) : '';
+        o += st === 1 ? at(st, 1, callCol(X.t('geocarte.legende.t1'))) : st === 2 ? at(st, 2, callCol(X.t('geocarte.legende.t2'), { fill: C.acc })) : st === 3 ? at(st, 3, callCol(X.t('geocarte.legende.t3'), { fill: C.pri })) : '';
         return o;
       } },
     { id: 'contact', kind: 'show', steps: 2, min: 2,
       fig: (st, p, X) => {
         const M = missionGeo(), only = st >= 1;
         let o = geoMapSvg(M, BOX, { dim: only ? other(M, [M.tp.u, M.tp.v]) : null, contact: only ? [M.tp.u, M.tp.v] : null, labels: true }) + legend(M, only ? new Set([M.tp.u, M.tp.v]) : null);
-        o += st === 0 ? at(st, 0, callout(CX, 57, X.t('geocarte.contact.t0'))) : at(st, 1, callout(CX, 57, X.t('geocarte.contact.t1'), { fill: C.acc }));
+        o += st === 0 ? at(st, 0, callCol(X.t('geocarte.contact.t0'))) : at(st, 1, callCol(X.t('geocarte.contact.t1'), { fill: C.acc }));
         return o;
       } },
     { id: 'horiz', kind: 'show', steps: 2, min: 2,
       fig: (st, p, X) => {
         const G = galerie('tabulaire'), cm = contactMid(G, BOX, 1, 2);
         let o = geoMapSvg(G, BOX, { labels: false }) + (st >= 1 ? eqOver(G, BOX, 100, true) : '') + legend(G, null);
-        o += st === 0 ? at(st, 0, callout(CX, 57, X.t('geocarte.horiz.t0'))) : at(st, 1, callout(CX, 57, X.t('geocarte.horiz.t1'), { fill: C.acc }));
+        o += st === 0 ? at(st, 0, callCol(X.t('geocarte.horiz.t0'))) : at(st, 1, callCol(X.t('geocarte.horiz.t1'), { fill: C.acc }));
         return o;
       } },
     { id: 'v2', kind: 'vote', min: 2,
@@ -120,12 +130,12 @@ export const geocarte = {
         let inner = at(st, 2, line(p1[0], p1[1], p3[0], p3[1], { c: C.ink, w: .6, dash: '1.5 1.2' }), { rest: st > 2 }) + at(st, 3, line(e0[0], e0[1], e1[0], e1[1], { c: C.acc, w: 1.4 })) +
           at(st, 4, azArrow(mid[0], mid[1], T.dipAz, 15, { c: C.ink, w: 2, head: 5 }), { rest: st > 4 }) + at(st, 5, line(F[0], F[1], p1[0], p1[1], { c: C.ink, w: 1.3, dash: '1.6 1' }));
         let o = L.wrap(map, inner);
-        o += at(st, 1, [p1, p2, p3].map((q, i) => circ(q[0], q[1], 1.6, { fill: C.ink, stroke: '#fff', w: .5 }) + tagSide(L, q, `${X.nf(T.p[i].z, 0)} m`, i === 1 ? 0 : (i === 0 ? 4 : -4), C.blue, 4.6, i === 1)).join(''), { rest: st > 1 });
+        o += at(st, 1, [p1, p2, p3].map(q => circ(q[0], q[1], 1.6, { fill: C.ink, stroke: '#fff', w: .5 })).join('') + threeTags([p1, p2, p3], T.p.map(p => `${X.nf(p.z, 0)} m`), 4, [C.blue, C.blue, C.blue], 4.6), { rest: st > 1 });
         o += at(st, 2, circ(Q[0], Q[1], 1.9, { fill: C.gold, stroke: C.ink, w: .6 }) + tagSide(L, Q, `${X.nf(T.p[1].z, 0)} m`, 4.6, C.ink), { rest: st > 2 });
         o += st === 0 ? at(st, 0, callout(CX, 34, X.t('geocarte.dip.t1'))) : st === 2 ? at(st, 2, callout(CX, 34, X.t('geocarte.dip.t2'))) : st === 3 ? at(st, 3, callout(CX, 34, X.t('geocarte.dip.t3'))) : st === 4 ? at(st, 4, callout(CX, 34, X.t('geocarte.dip.t4', { dir: toward(T.dipAz) }), { fill: C.acc })) : '';
-        if (st >= 1) o += scaleBar(d, L.k, BOX);
+        if (st >= 1) o += scaleBar(d, L.k, BOX, [p1, p2, p3]);
         o += at(st, 5, rect(107, 3, 50, 44, { fill: C.soft, stroke: C.ink, w: .5, rx: 2 }) + txt(CX, 8, `Δz = ${X.nf(T.dz, 0)} m`, { size: 3.8, w: 800 }) + txt(CX, 14, `d = ${X.nf(T.d, 0)} m`, { size: 3.8, w: 800 }) + dipTriangle(T, X, 113, 37, 26) + txt(126, 33.2, `${X.nf(T.dip, 0)}°`, { size: 6.6, fill: C.acc, w: 800 }));
-        o += st === 5 ? at(st, 5, callout(CX, 57, X.t('geocarte.dip.t5'), { fill: C.pri })) : '';
+        o += st === 5 ? at(st, 5, callCol(X.t('geocarte.dip.t5'), { fill: C.pri })) : '';
         return o;
       } },
     { id: 'v3', kind: 'vote', min: 2,
@@ -134,7 +144,7 @@ export const geocarte = {
         draw: (st, X) => {
           const M = demoGeo(), T = M.tp, d = M.geo.dem, L = loupe(M, T, VB), sx = Math.sin(T.strikeAz * RAD), sy = -Math.cos(T.strikeAz * RAD), [e0, e1] = clipRay(T.p[1], { x: sx, y: sy }, d.W, d.H).map(L.zp);
           const [p1, p2, p3] = T.p.map(L.zp), map = geoMapSvg(M, VB, { dim: other(M, [T.u, T.v]), contact: [T.u, T.v], hlW: 1.3 / L.k, contactW: .45, eq: 40, eqOp: .4 });
-          return L.wrap(map, line(e0[0], e0[1], e1[0], e1[1], { c: C.acc, w: 1.4 })) + [p1, p2, p3].map((q, i) => circ(q[0], q[1], 1.5, { fill: C.ink, stroke: '#fff', w: .5 }) + tagSide(L, q, `${X.nf(T.p[i].z, 0)} m`, i === 1 ? 0 : (i === 0 ? 3.6 : -3.6), i === 1 ? C.ink : C.blue, 4.2, i === 1)).join('') +
+          return L.wrap(map, line(e0[0], e0[1], e1[0], e1[1], { c: C.acc, w: 1.4 })) + [p1, p2, p3].map(q => circ(q[0], q[1], 1.5, { fill: C.ink, stroke: '#fff', w: .5 })).join('') + threeTags([p1, p2, p3], T.p.map(p => `${X.nf(p.z, 0)} m`), 3.6, [C.blue, C.ink, C.blue], 4.2) +
             arrow(VB.x + VB.w - 6, VB.y + 11, VB.x + VB.w - 6, VB.y + 4, { c: C.ink, w: 1, head: 2.4 }) + txt(VB.x + VB.w - 10, VB.y + 5, 'N', { size: 4, w: 800 }) + top(X.t('geocarte.v3.top', { z: X.nf(T.p[1].z, 0) }));
         } },
       q: 1 },
@@ -144,7 +154,7 @@ export const geocarte = {
         let o = geoMapSvg(M, BOX, { labels: true }) + legend(M, null);
         o += at(st, 1, arrow(a[0], a[1], b[0], b[1], { c: C.acc, w: 1.5, head: 3.6 }), { rest: st > 1 });
         o += at(st, 2, legendArrow(M, X.t('geocarte.time')), { rest: st > 2 });
-        o += st === 0 ? at(st, 0, callout(CX, 57, X.t('geocarte.age.t0'))) : st === 1 ? at(st, 1, callout(CX, 57, X.t('geocarte.age.t1', { dir: toward(M.dipAz) }))) : st === 2 ? at(st, 2, callout(CX, 57, X.t('geocarte.age.t2'), { fill: C.acc })) : at(st, 3, callout(CX, 57, X.t('geocarte.age.t3'), { fill: C.pri }));
+        o += st === 0 ? at(st, 0, callCol(X.t('geocarte.age.t0'))) : st === 1 ? at(st, 1, callCol(X.t('geocarte.age.t1', { dir: toward(M.dipAz) }))) : st === 2 ? at(st, 2, callCol(X.t('geocarte.age.t2'), { fill: C.acc })) : at(st, 3, callCol(X.t('geocarte.age.t3'), { fill: C.pri }));
         return o;
       } },
     { id: 'v4', kind: 'vote', min: 2,
@@ -158,13 +168,13 @@ export const geocarte = {
       fig: (st, p, X) => {
         const G = galerie('filon'), fi = G.geo.units.findIndex(u => u.ign);
         let o = geoMapSvg(G, BOX, { labels: true, only: st >= 1 ? fi : null }) + legend(G, st >= 1 ? new Set([fi]) : null);
-        o += st === 0 ? at(st, 0, callout(CX, 57, X.t('geocarte.recoup.t0'))) : st === 1 ? at(st, 1, callout(CX, 57, X.t('geocarte.recoup.t1'))) : at(st, 2, callout(CX, 57, X.t('geocarte.recoup.t2'), { fill: C.acc }));
+        o += st === 0 ? at(st, 0, callCol(X.t('geocarte.recoup.t0'))) : st === 1 ? at(st, 1, callCol(X.t('geocarte.recoup.t1'))) : at(st, 2, callCol(X.t('geocarte.recoup.t2'), { fill: C.acc }));
         return o;
       } },
     { id: 'struct', kind: 'show', steps: 6, min: 4,
       fig: (st, p, X) => {
         const kinds = ['tabulaire', 'monoclinal', 'anticlinal', 'synclinal', 'discordance', 'granite'], k = kinds[st], G = galerie(k);
-        return geoMapSvg(G, BOX, { eq: G.eq, eqOp: .35 }) + legend(G, null) + legendArrow(G, X.t('geocarte.time')) + callout(CX, 57, X.t('geocarte.sig.' + k), { fill: k === 'anticlinal' || k === 'synclinal' ? C.acc : C.ink });
+        return geoMapSvg(G, BOX, { eq: G.eq, eqOp: .35 }) + legend(G, null) + legendArrow(G, X.t('geocarte.time')) + callCol(X.t('geocarte.sig.' + k), { fill: k === 'anticlinal' || k === 'synclinal' ? C.acc : C.ink });
       } },
     { id: 'v5', kind: 'vote', min: 2,
       vote: { opts: [{ ok: true }, { mis: 'g-pli-inv' }, { mis: 'g-pli-mono' }, { mis: 'g-pli-disc' }],
@@ -176,8 +186,8 @@ export const geocarte = {
         const map = geoMapSvg(E, BOX, { eq: 40, eqOp: .5, contact: [T.u, T.v], hlW: 1 / L.k, contactW: .45 }), pts = T.p.map(zp);
         const [e0, e1] = clipRay(T.p[1], { x: sx, y: sy }, d.W, d.H).map(zp), c = zp(T.Q), mid = [(pts[1][0] + c[0]) / 2, (pts[1][1] + c[1]) / 2];
         let o = L.wrap(map, st >= 2 ? line(e0[0], e0[1], e1[0], e1[1], { c: C.acc, w: 1.4 }) + azArrow(mid[0], mid[1], T.dipAz, 15, { c: C.ink, w: 2, head: 5 }) : '');
-        o += at(st, 0, pts.map((q, i) => circ(q[0], q[1], 1.6, { fill: C.ink, stroke: '#fff', w: .5 }) + tagSide(L, q, `${X.nf(T.p[i].z, 0)} m`, i === 1 ? 0 : (i === 0 ? 4 : -4), C.blue, 4.6, i === 1)).join(''), { rest: true });
-        o += scaleBar(d, L.k, BOX);
+        o += at(st, 0, pts.map(q => circ(q[0], q[1], 1.6, { fill: C.ink, stroke: '#fff', w: .5 })).join('') + threeTags(pts, T.p.map(p => `${X.nf(p.z, 0)} m`), 4, [C.blue, C.blue, C.blue], 4.6), { rest: true });
+        o += scaleBar(d, L.k, BOX, pts);
         return st < 2 ? o : o + callout(CX, 30, X.t('geocarte.pr.t2', { dip: X.nf(T.dip, 0), dir: toward(T.dipAz), sz: X.nf(T.strikeAz, 0) }), { fill: C.pri });
       } },
     { id: 'recap', kind: 'recap', steps: 4, min: 1, fig: (st, p, X) => recapFig('geocarte', st, X) }

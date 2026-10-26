@@ -9,7 +9,7 @@ import { t, nf, setLang, has } from './i18n.js';
 import * as K from './kit.js';
 import { TOPICS, lessonById } from './lessons/index.js';
 import { h } from '../core/util.js';
-import { loadPrefs, savePrefs, logVote, unitPx, fmtClock, safeHtml, words, passiveRun, mazur } from './tools.js';
+import { loadPrefs, savePrefs, logVote, unitPx, fmtClock, safeHtml, words, passiveRun, mazur, optionOrder, invertOrder, chromeUnit } from './tools.js';
 import { pickExo } from '../engine/pedagogy/index.js';
 
 const ICON = {
@@ -41,32 +41,52 @@ function exoFor(sc, seed) {
 }
 const fmtAns = f => { const a = f.a, r = Math.abs(a) >= 100 ? Math.round(a) : Math.round(a * 100) / 100; return `${f.l} ${nf(r, 2)} ${f.u || ''}`.trim(); };
 
+/* Légende : tient dans 24 % de la hauteur d'écran (sinon elle écrase la figure). Police de départ 4,9 u de chrome, réduite jusqu'à 4,2 % de la hauteur
+   d'écran ; si le détail d'une correction (explication du malentendu) ne tient pas, on ne garde que le nom du malentendu : l'explication reste
+   dans la vue présentateur et la bibliothèque des malentendus. Dernier recours : police minimale. */
+/* Titre de la scène : au plus 11 % de la hauteur d'écran (sinon, à 4:3 ou à forte échelle, il passe sur 4 lignes, écrase la légende et repousse le rail
+   hors de l'écran : audit v3.1). Police de départ 4,6 u de chrome, réduite jusqu'à 3,8 % de la hauteur d'écran. */
+function fitClaim(el, uc) {
+  const H = innerHeight, budget = .11 * H, start = 4.6 * uc, floor = Math.min(start, .038 * H), step = Math.max(.4, start * .04);
+  for (let px = start; px >= floor - .01; px -= step) { el.style.fontSize = px + 'px'; if (el.scrollHeight <= budget) return; }
+  el.style.fontSize = floor + 'px';
+}
+function fitCaption(capEl, variants, uc) {
+  const H = innerHeight, budget = .24 * H, start = 4.9 * uc, floor = Math.min(start, .042 * H), step = Math.max(.4, start * .03);
+  for (const html of variants) {
+    capEl.innerHTML = html;
+    for (let px = start; px >= floor - .01; px -= step) { capEl.style.fontSize = px + 'px'; if (capEl.scrollHeight <= budget) return; }
+  }
+  capEl.style.fontSize = floor + 'px';
+}
+
 /* =====================================================================
    Figure d'un vote : question à gauche, 4 cartes lettrées à droite, barres de résultat, puis correction nommée
    ===================================================================== */
-function voteFig(L, sc, S, X) {
+function voteFig(L, sc, S, X, P) {
   const v = sc.vote, m = v.opts.length, tot = S.votes[sc.id] || new Array(m).fill(0), sum = tot.reduce((a, b) => a + b, 0), st = S.st;
   let out = '';
   /* gauche : figure de la scène ou, à défaut, la question en grand */
   if (v.draw) out += K.g(v.draw(st, X), {});
   else { const f = K.fit(v.qText ? v.qText(X) : t(key(L, sc, 'q')), 78, 6.4, 4); out += K.txtL(46, 34 - (f.lines.length - 1) * f.size * .65, f.lines, { size: f.size, lh: f.size * 1.3, w: 800, fixed: true }); }
   const ch = (66 - (m - 1) * 1.6) / m, x0 = 90, w = 68;
-  v.opts.forEach((o, i) => {
-    const y = 2 + i * (ch + 1.6), ok = o.ok, rev = st >= 2, dim = rev && !ok;
+  /* d = position affichée (lettre), ci = index canonique de l'option (décomptes, journal, bilan) */
+  P.forEach((ci, d) => {
+    const o = v.opts[ci], y = 2 + d * (ch + 1.6), ok = o.ok, rev = st >= 2, dim = rev && !ok;
     const col = rev && ok ? K.C.green : K.C.ink;
     let c = K.rect(x0, y, w, ch, { fill: rev && ok ? '#e3f5ea' : K.C.paper, stroke: col, w: rev && ok ? 1 : .6, rx: 1.4 });
-    c += K.badge(x0 + 5.2, y + ch / 2, LET[i], { r: 3.4, fill: col, size: 4.6 });
-    const f = K.fit(v.label ? v.label(i, X) : t(key(L, sc, 'o' + i)), 37, 4.2, 2);
+    c += K.badge(x0 + 5.2, y + ch / 2, LET[d], { r: 3.4, fill: col, size: 4.6 });
+    const f = K.fitBox(v.label ? v.label(ci, X) : t(key(L, sc, 'o' + ci)), 37, ch - (st >= 1 ? 4.6 : 2.4), 4.2, 2);
     c += K.txtL(x0 + 10.5, y + ch / 2 - (f.lines.length - 1) * f.size * .58, f.lines, { size: f.size, lh: f.size * 1.16, anchor: 'start', w: 800, fixed: true });
     if (st >= 1) {
-      const n = tot[i] || 0, bw = sum ? (w - 3) * n / sum : 0;
+      const n = tot[ci] || 0, bw = sum ? (w - 3) * n / sum : 0;
       c += K.rect(x0 + 1.5, y + ch - 2.6, w - 3, 1.5, { fill: K.C.soft, rx: .7 }) + (bw ? K.rect(x0 + 1.5, y + ch - 2.6, bw, 1.5, { fill: rev ? (ok ? K.C.green : K.C.red) : K.C.blue, rx: .7 }) : '');
       c += K.txt(x0 + w - 14, y + ch / 2 - .4, String(n), { size: 5.4, anchor: 'end', w: 800 });
       const pre = S.pre && S.pre[sc.id], ps = pre ? pre.reduce((a, b) => a + b, 0) : 0;
-      if (ps) c += K.rect(x0 + 1.5, y + ch - 1.05, (w - 3) * (pre[i] || 0) / ps, .8, { fill: K.C.mute, rx: .4 });
+      if (ps) c += K.rect(x0 + 1.5, y + ch - 1.05, (w - 3) * (pre[ci] || 0) / ps, .8, { fill: K.C.mute, rx: .4 });
     }
     if (rev) c += ok ? K.path(`M${x0 + w - 9.4} ${y + ch / 2 + .6}l2 2.2l4.2-5`, { stroke: K.C.green, w: 1.1 }) : K.path(`M${x0 + w - 9.2} ${y + ch / 2 - 1.7}l3.4 3.4M${x0 + w - 5.8} ${y + ch / 2 - 1.7}l-3.4 3.4`, { stroke: K.C.red, w: 1 });
-    out += K.el('g', { 'data-vote': i, class: 'st-l-card' + (dim ? ' dim' : ''), role: 'button' }, c);
+    out += K.el('g', { 'data-vote': d, class: 'st-l-card' + (dim ? ' dim' : ''), role: 'button' }, c);
   });
   return out;
 }
@@ -84,7 +104,7 @@ export function mountLesson(root, id, arg) {
   const L = lessonById(id); if (!L) return lessonIndex(root);
   if (arg === 'presenter') return mountPresenter(root, L);
   const prefs = loadPrefs(); setLang(prefs.lang || 'fr');
-  const S = { pre: {}, sc: Math.max(0, Math.min(L.scenes.length - 1, (+arg || 1) - 1)), st: 0, pi: 0, rs: prefs.rs || 1, theme: prefs.theme || 'light', seed: prefs.seed || L.seed || 12, votes: {}, blank: false, help: false, fwd: true, tEnd: 0, tTot: 0 };
+  const S = { pre: {}, sc: Math.max(0, Math.min(L.scenes.length - 1, (+arg || 1) - 1)), st: 0, pi: 0, rs: prefs.rs || 1, theme: prefs.theme || 'light', seed: prefs.seed || L.seed || 12, votes: {}, hint: !!prefs.hint, blank: false, help: false, fwd: true, tEnd: 0, tTot: 0 };
   document.body.classList.add('stage-on');
   const el = h('div', { class: 'stg st-l', 'data-theme': S.theme });
   el.innerHTML = `<header class="st-l-top"><span class="st-l-kind" id="lKind"></span><h1 class="st-l-claim" id="lClaim"></h1><span class="st-l-n" id="lN"></span></header>
@@ -101,11 +121,12 @@ export function mountLesson(root, id, arg) {
   const $ = s => el.querySelector(s);
   const ctxCache = new Map(), ctx = () => { const k = S.seed; if (!ctxCache.has(k)) ctxCache.set(k, L.setup ? L.setup(k) : {}); return ctxCache.get(k); };
   const nS = () => stepsOf(L.scenes[S.sc], ctx());
+  const orderOf = sc => optionOrder(sc.vote.opts.length, L.id + '.' + sc.id, S.seed, !!sc.vote.fixed);
   let ch = null; try { ch = new BroadcastChannel('gc-stage-L-' + L.id); } catch (e) { }
   const TOOLS = [['prev', 'lk.prev', '←'], ['next', 'lk.next', '→'], '|', ['minus', 'lk.smaller', '−'], ['plus', 'lk.bigger', '+'], ['theme', 'lk.theme', 'T'], ['blank', 'lk.blank', 'B'], ['full', 'lk.full', 'F'], ['present', 'lk.present', 'P'], ['help', 'lk.help', 'H'], ['exit', 'lk.exit', 'Esc']];
   $('#lTools').innerHTML = TOOLS.map(x => x === '|' ? '<i class="st-sep"></i>' : `<button class="st-b" data-act="${x[0]}" aria-label="${esc(t(x[1]))}" title="${esc(t(x[1]))} (${x[2]})">${ic(ICON[x[0]])}</button>`).join('');
   $('#lRail').innerHTML = L.scenes.map((s, i) => `<button class="st-l-dot" data-go="${i}" data-kind="${s.kind}" aria-label="${esc(t(key(L, s, 'claim')))}">${kindIc(s.kind)}</button>`).join('');
-  $('#lHelp').innerHTML = `<div class="st-l-hbox"><h2>${t('lk.helpTitle')}</h2>${['→ / Espace|lk.h.next', '←|lk.h.prev', '↑ ↓|lk.h.param', 'A B C D|lk.h.vote', 'B|lk.h.blank', 'T|lk.h.theme', '+ −|lk.h.size', 'R|lk.h.revote', 'N|lk.h.regen', 'K|lk.h.test', 'F · P · Échap|lk.h.misc'].map(r => { const [k, v] = r.split('|'); return `<div class="st-l-hrow"><kbd>${k}</kbd><span>${t(v)}</span></div>`; }).join('')}</div>`;
+  $('#lHelp').innerHTML = `<div class="st-l-hbox"><h2>${t('lk.helpTitle')}</h2>${['→ / Espace|lk.h.next', '←|lk.h.prev', '↑ ↓|lk.h.param', 'A B C D|lk.h.vote', 'B|lk.h.blank', 'T|lk.h.theme', '+ −|lk.h.size', 'R|lk.h.revote', 'I|lk.h.hint', 'N|lk.h.regen', 'K|lk.h.test', 'F · P · Échap|lk.h.misc'].map(r => { const [k, v] = r.split('|'); return `<div class="st-l-hrow"><kbd>${k}</kbd><span>${t(v)}</span></div>`; }).join('')}</div>`;
 
   const post = () => ch && ch.postMessage({ t: 'state', S: { sc: S.sc, st: S.st, pi: S.pi, seed: S.seed, votes: S.votes, pre: S.pre, steps: nS() } });
   let timerI = 0;
@@ -113,31 +134,44 @@ export function mountLesson(root, id, arg) {
   function render() {
     const sc = L.scenes[S.sc], cx = ctx(), n = nS(), pv = paramOf(sc, S.pi);
     S.st = Math.max(0, Math.min(S.st, n - 1));
-    el.dataset.theme = S.theme; el.style.setProperty('--u', unitPx(S.rs) + 'px');
+    const uc = chromeUnit(unitPx(S.rs), unitPx(1), innerWidth);
+    el.dataset.theme = S.theme; el.style.setProperty('--u', unitPx(S.rs) + 'px'); el.style.setProperty('--uc', uc + 'px');
     K.room(S.rs, innerWidth / innerHeight); K.direction(S.fwd);
     const X = { t, nf, ctx: cx, pi: S.pi, seed: S.seed, rs: S.rs, scene: sc, lesson: L };
+    /* vote : perm = ordre d'affichage ; X.letterOf(c) = lettre montrée à la salle pour l'option canonique c (pour les figures lettrées) */
+    const P = sc.kind === 'vote' ? orderOf(sc) : null, inv = P && invertOrder(P);
+    if (P) { X.perm = P; X.letterOf = c => LET[inv[c]]; }
     let inner = '';
-    if (sc.kind === 'vote') inner = voteFig(L, sc, S, X); else if (sc.fig) inner = sc.fig(S.st, pv, X);
+    if (sc.kind === 'vote') inner = voteFig(L, sc, S, X, P); else if (sc.fig) inner = sc.fig(S.st, pv, X);
     $('#lSvg').innerHTML = inner;
     $('#lSvg').setAttribute('aria-label', t(key(L, sc, 'claim')));
     $('#lKind').innerHTML = `${kindIc(sc.kind)}<span>${t('kind.' + sc.kind)}</span>`; $('#lKind').dataset.kind = sc.kind;
     $('#lClaim').textContent = t(key(L, sc, 'claim'));
     $('#lN').textContent = `${S.sc + 1} / ${L.scenes.length}`;
+    fitClaim($('#lClaim'), uc);
     $('#lTestRs').textContent = t('lk.test.rs', { rs: nf(S.rs, 2) });
     /* légende */
     let cap = '';
     if (sc.cap) { const r = sc.cap(S.st, pv, X); cap = r ? t(r[0], r[1]) : ''; } else { const k = capKey(L, sc, S.st); cap = k ? t(k, sc.capVars ? sc.capVars(S.st, pv, X) : undefined) : ''; }
+    /* variantes de la légende, de la plus complète à la plus courte (fitCaption retient la première qui tient) */
+    let capVariants;
     if (sc.kind === 'vote' && S.st >= 2) {
       const d = diagnosis(sc, S), ok = sc.vote.opts.findIndex(o => o.ok);
-      cap = `<b class="st-l-ok">${LET[ok]} — ${sc.vote.solText ? sc.vote.solText(X) : t(key(L, sc, 'sol'))}</b>` + (d ? `<span class="st-l-mis"><b>${LET[d.i]}</b> (${d.n}) · ${t('mis.' + d.id)} — ${t('mis.' + d.id + '.why')}</span>` : '');
-    } else cap = esc(cap).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-    $('#lCap').innerHTML = cap;
+      const head = `<b class="st-l-ok">${LET[inv[ok]]} — ${sc.vote.solText ? sc.vote.solText(X) : t(key(L, sc, 'sol'))}</b>`;
+      const mis = why => `<span class="st-l-mis"><b>${LET[inv[d.i]]}</b> (${d.n}) · ${t('mis.' + d.id)}${why ? ' — ' + t('mis.' + d.id + '.why') : ''}</span>`;
+      capVariants = d ? [head + mis(true), head + mis(false)] : [head];
+    } else if (S.hint && sc.kind === 'vote' && S.st === 1 && mazur(S.votes[sc.id], sc.vote.opts.findIndex(o => o.ok))) {
+      /* indication enseignant, courte et grosse (touche I) ; la version complète est dans la vue présentateur */
+      const mz = mazur(S.votes[sc.id], sc.vote.opts.findIndex(o => o.ok));
+      capVariants = [`<b>${mz.pct} %</b> · ${esc(t('pi.s.' + mz.band))}`];
+    } else capVariants = [esc(cap).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')];
     /* panneau latéral : paramètre ↑↓, minuteur */
     let side = '';
     if (sc.param) side += `<div class="st-l-par"><button class="st-b" data-act="pdn" aria-label="−">${ic(ICON.down)}</button><span class="st-l-pv">${esc(sc.param.label(pv, S.pi, X))}</span><button class="st-b" data-act="pup" aria-label="+">${ic(ICON.up)}</button></div>`;
-    if (sc.kind === 'vote' && S.st >= 1) { const sum = (S.votes[sc.id] || []).reduce((a, b) => a + b, 0); side += `<div class="st-l-tally">${t('lk.votes', { n: sum })}</div>`; const mz = S.st === 1 ? mazur(S.votes[sc.id], sc.vote.opts.findIndex(o => o.ok)) : null; if (mz) side += `<div class="st-l-pi pi-${mz.band}"><b>${mz.pct} %</b> ${t('pi.' + mz.band)}${S.pre[sc.id] ? ` <i>${t('pi.round2')}</i>` : ''}</div>`; }
+    if (sc.kind === 'vote' && S.st >= 1) { const sum = (S.votes[sc.id] || []).reduce((a, b) => a + b, 0); side += `<div class="st-l-tally">${t('lk.votes', { n: sum })}</div>`; }
     if (sc.practice) side += `<div class="st-l-timer" id="lTimer"><i></i><b></b></div>`;
     $('#lSide').innerHTML = side;
+    fitCaption($('#lCap'), capVariants, uc);
     /* superposition HTML : exercice du moteur */
     const ov = $('#lOv'); ov.innerHTML = ''; ov.className = 'st-l-ov';
     if (sc.practice && sc.practice.ch) {
@@ -169,12 +203,14 @@ export function mountLesson(root, id, arg) {
   const next = () => { const n = nS(); if (S.st < n - 1) go(S.sc, S.st + 1); else if (S.sc < L.scenes.length - 1) go(S.sc + 1, 0); else { location.hash = '#/stage'; } };
   const prev = () => { if (S.st > 0) go(S.sc, S.st - 1); else if (S.sc > 0) { const p = S.sc - 1; go(p, stepsOf(L.scenes[p], ctx()) - 1); } };
   const param = d => { const sc = L.scenes[S.sc]; if (!sc.param) return; const n = sc.param.values.length; S.pi = (S.pi + d + n) % n; S.fwd = true; render(); };
-  const vote = (i, d = 1) => { const sc = L.scenes[S.sc]; if (sc.kind !== 'vote' || i >= sc.vote.opts.length) return; const a = S.votes[sc.id] || (S.votes[sc.id] = new Array(sc.vote.opts.length).fill(0)); a[i] = Math.max(0, a[i] + d); if (S.st === 0) S.st = 1; S.fwd = false; render(); };
+  /* i = lettre affichée (touche a–d, clic, présentateur) ; le décompte est tenu en ordre canonique */
+  const vote = (i, d = 1) => { const sc = L.scenes[S.sc]; if (sc.kind !== 'vote' || i >= sc.vote.opts.length) return; const c = orderOf(sc)[i]; const a = S.votes[sc.id] || (S.votes[sc.id] = new Array(sc.vote.opts.length).fill(0)); a[c] = Math.max(0, a[c] + d); if (S.st === 0) S.st = 1; S.fwd = false; render(); };
   const logIt = () => { const sc = L.scenes[S.sc]; if (sc.kind === 'vote') logVote({ lesson: L.id, scene: sc.id, votes: S.votes[sc.id] || [], pre: S.pre[sc.id] || null, ok: sc.vote.opts.findIndex(o => o.ok) }); };
   /* R : 1er tour terminé → on garde l'ancien tally en « avant » (barre grise) et on repart de zéro pour le revote après discussion */
   const revote = () => { const sc = L.scenes[S.sc]; if (sc.kind !== 'vote' || S.st !== 1 || S.pre[sc.id]) return; const cur = S.votes[sc.id]; if (!cur || !cur.some(Boolean)) return; S.pre[sc.id] = cur.slice(); S.votes[sc.id] = new Array(cur.length).fill(0); S.fwd = false; render(); };
   const act = a => {
     if (a === 'prev') prev(); else if (a === 'next') { if (L.scenes[S.sc].kind === 'vote' && S.st === 1) logIt(); next(); }
+    else if (a === 'hint') { S.hint = !S.hint; savePrefs({ hint: S.hint }); render(); }
     else if (a === 'revote') revote(); else if (a === 'pup') param(1); else if (a === 'pdn') param(-1);
     else if (a === 'blank') { S.blank = !S.blank; $('#lBlank').classList.toggle('on', S.blank); }
     else if (a === 'theme') { S.theme = S.theme === 'light' ? 'dark' : 'light'; savePrefs({ theme: S.theme }); render(); }
@@ -196,7 +232,7 @@ export function mountLesson(root, id, arg) {
     if (e.target.closest('.st-l-top,.st-l-rail,.st-l-tools')) return;
     const r = el.getBoundingClientRect(); (e.clientX - r.left) < r.width * .2 ? prev() : act('next');
   });
-  const KEYS = { ArrowRight: 'next', PageDown: 'next', ' ': 'next', Enter: 'next', ArrowLeft: 'prev', PageUp: 'prev', Backspace: 'prev', ArrowUp: 'pup', ArrowDown: 'pdn', b: 'blank', B: 'blank', '.': 'blank', t: 'theme', T: 'theme', '+': 'plus', '=': 'plus', '-': 'minus', _: 'minus', n: 'regen', N: 'regen', f: 'full', F: 'full', p: 'present', P: 'present', h: 'help', H: 'help', '?': 'help', k: 'test', K: 'test', r: 'revote', R: 'revote', Escape: 'exit' };
+  const KEYS = { ArrowRight: 'next', PageDown: 'next', ' ': 'next', Enter: 'next', ArrowLeft: 'prev', PageUp: 'prev', Backspace: 'prev', ArrowUp: 'pup', ArrowDown: 'pdn', b: 'blank', B: 'blank', '.': 'blank', t: 'theme', T: 'theme', '+': 'plus', '=': 'plus', '-': 'minus', _: 'minus', n: 'regen', N: 'regen', f: 'full', F: 'full', p: 'present', P: 'present', h: 'help', H: 'help', '?': 'help', k: 'test', K: 'test', r: 'revote', i: 'hint', I: 'hint', R: 'revote', Escape: 'exit' };
   const onKey = e => {
     if (e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
     const vi = 'abcd'.indexOf(e.key.toLowerCase()), vn = '1234'.indexOf(e.key);
@@ -239,7 +275,7 @@ function mountPresenter(root, L) {
     const nx = L.scenes[S.sc + 1]; $('#pvNext').textContent = nx ? t(key(L, nx, 'claim')) : '—';
     el.querySelectorAll('#pvList .pv-b').forEach((b, i) => b.classList.toggle('on', i === S.sc));
     const v = S.votes[sc.id]; $('#pvVotes').style.display = sc.kind === 'vote' ? '' : 'none';
-    if (sc.kind === 'vote') { const sum = (v || []).reduce((a, b) => a + b, 0) || 1; $('#pvVotes').innerHTML = `<h3>${t('lk.votes', { n: (v || []).reduce((a, b) => a + b, 0) })}</h3>` + ((m) => m ? `<div class="st-l-pi pi-${m.band}"><b>${m.pct} %</b> ${t('pi.' + m.band)}</div>` : '')(mazur(v, sc.vote.opts.findIndex(o => o.ok))) + sc.vote.opts.map((o, i) => `<div class="pv-bar"><b>${LET[i]}</b><i style="width:${Math.round(100 * ((v || [])[i] || 0) / sum)}%"></i><span>${(v || [])[i] || 0}</span></div>`).join(''); }
+    if (sc.kind === 'vote') { const sum = (v || []).reduce((a, b) => a + b, 0) || 1; $('#pvVotes').innerHTML = `<h3>${t('lk.votes', { n: (v || []).reduce((a, b) => a + b, 0) })}</h3>` + ((m) => m ? `<div class="st-l-pi pi-${m.band}"><b>${m.pct} %</b> ${t('pi.' + m.band)}</div>` : '')(mazur(v, sc.vote.opts.findIndex(o => o.ok))) + optionOrder(sc.vote.opts.length, L.id + '.' + sc.id, S.seed, !!sc.vote.fixed).map((c, d) => `<div class="pv-bar"><b>${LET[d]}</b><i style="width:${Math.round(100 * ((v || [])[c] || 0) / sum)}%"></i><span>${(v || [])[c] || 0}</span></div>`).join(''); }
   };
   const stat = () => { $('#pvStat').textContent = live ? t('pres.connected') : t('pres.waiting'); $('#pvStat').className = 'pv-status ' + (live ? 'ok' : ''); };
   if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'state') { Object.assign(S, m.S); live = true; stat(); draw(); } };
