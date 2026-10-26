@@ -32,7 +32,7 @@ Relevés par scène de vote : bande de Mazur au premier vote, bande après revot
 Questions flash : l'enseignant pose la « question flash » affichée en vue présentateur sur quelques scènes ; noter si elle déclenche une discussion utile.
 
 ## 5. Après la séance (10 minutes, étudiants)
-Questionnaire anonyme, papier ou formulaire, 6 items (échelle 1–5, « pas du tout d'accord » → « tout à fait d'accord ») + 2 questions ouvertes :
+Questionnaire anonyme, papier ou formulaire, 6 items (échelle 1–5, « pas du tout d'accord » → « tout à fait d'accord ») + 3 questions ouvertes + 1 question à choix (≈ 12 minutes) :
 1. Je pouvais lire tout ce qui était projeté depuis ma place.
 2. Je comprenais ce qu'on me demandait à chaque vote.
 3. Les mauvaises réponses proposées m'ont aidé à voir mon erreur.
@@ -41,6 +41,10 @@ Questionnaire anonyme, papier ou formulaire, 6 items (échelle 1–5, « pas du 
 6. Je me sens plus capable de lire une carte géologique qu'avant.
 7. (ouverte) Ce qui était le plus clair / le plus utile.
 8. (ouverte) Ce qui était illisible, confus ou inutile.
+9. (ouverte) Qu'est-ce qui vous manque encore pour comprendre la géologie en 3D ?
+10. (choix unique) Pour les prochaines séances, quelle activité vous aiderait le plus à apprendre ?
+    ☐ Voter · ☐ Dessiner · ☐ Manipuler un bloc géologique · ☐ Autre (préciser) : ……………
+Les questions 9 et 10 servent à **orienter la v3.2** ([V3_2_VISION.md](V3_2_VISION.md)) ; elles ne mesurent pas l'apprentissage.
 Mentionner : place dans la salle (rangée 1–3 / milieu / fond) — **la seule variable demandée**, pour Q1.
 
 ## 6. Fiche d'observation (à imprimer)
@@ -60,6 +64,7 @@ Ajouter en bas : lumière de la salle, projecteur (modèle si connu), distance d
   - *Poursuivre tel quel* : lisibilité ≥ 80 % d'accord au fond de la salle, 0 incident bloquant, ≥ 70 % de concordance.
   - *Corriger puis réessayer* : toute scène illisible pour ≥ 20 % du fond de la salle, ou durée > 25 % au-dessus de la prévue.
   - *Suspendre* : incident bloquant répété ou erreur scientifique constatée (corriger le contenu avant toute reprise).
+  - **Orientation v3.2** (questions 9 et 10) : codage des réponses ouvertes à la question 9 en catégories définies **après lecture** (par ex. voir l'intérieur, relier carte et coupe, vocabulaire, manipulation, exemples réels, temps) par deux lecteurs indépendants si possible, avec le nombre de réponses par catégorie et 2–3 citations anonymes ; question 10 : effectifs et % par choix, **croisés avec la place dans la salle** et, si disponible, avec la réussite aux votes ; regrouper les « Autre » par thème. Une préférence déclarée n'est pas une preuve d'efficacité : elle informe le classement de la v3.2, elle ne le décide pas seule.
 - Rapporter honnêtement les résultats faibles ; noter le nombre d'étudiants, car n est petit.
 
 ## 8. Éthique et données
