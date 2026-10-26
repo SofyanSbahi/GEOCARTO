@@ -12,3 +12,4 @@ test-results/
 # Divers
 .DS_Store
 Thumbs.db
+site/
