@@ -11,6 +11,7 @@ import { TOPICS, lessonById } from './lessons/index.js';
 import { h } from '../core/util.js';
 import { loadPrefs, savePrefs, logVote, unitPx, fmtClock, safeHtml, words, passiveRun, mazur, optionOrder, invertOrder, chromeUnit } from './tools.js';
 import { pickExo } from '../engine/pedagogy/index.js';
+import { threadHtml, threadNote } from './thread.js';
 
 const ICON = {
   prev: '<path d="M15 5l-7 7 7 7"/>', next: '<path d="M9 5l7 7-7 7"/>', up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
@@ -51,6 +52,19 @@ function fitClaim(el, uc) {
   for (let px = start; px >= floor - .01; px -= step) { el.style.fontSize = px + 'px'; if (el.scrollHeight <= budget) return; }
   el.style.fontSize = floor + 'px';
 }
+/* Fil du raisonnement : une seule rangée. On essaie d'abord les six étapes avec leur nom (police 4,6 u de chrome, réduite jusqu'à 3,8 % de la hauteur d'écran ; la rangée ne dépasse jamais 9 % de la hauteur) ;
+   si elles ne tiennent pas (4:3, 16:10, amphi), les étapes non courantes ne gardent que leur numéro et l'étape courante garde son nom. */
+function fitThread(nav) {
+  const ol = nav.firstElementChild; if (!ol) return;
+  const H = innerHeight, uc = parseFloat(nav.parentElement.style.getPropertyValue('--uc')) || H * .01, start = 4.6 * uc, floor = Math.min(start, .038 * H), step = Math.max(.4, start * .04);
+  const fits = () => ol.scrollWidth <= nav.clientWidth + 1 && nav.getBoundingClientRect().height <= .09 * H;
+  nav.classList.remove('compact');
+  for (const compact of [false, true]) {
+    nav.classList.toggle('compact', compact);
+    for (let px = start; px >= floor - .01; px -= step) { nav.style.setProperty('--thf', px + 'px'); if (fits()) return; }
+  }
+  nav.style.setProperty('--thf', floor + 'px');
+}
 function fitCaption(capEl, variants, uc) {
   const H = innerHeight, budget = .24 * H, start = 4.9 * uc, floor = Math.min(start, .042 * H), step = Math.max(.4, start * .03);
   for (const html of variants) {
@@ -64,6 +78,7 @@ function fitCaption(capEl, variants, uc) {
    Figure d'un vote : question à gauche, 4 cartes lettrées à droite, barres de résultat, puis correction nommée
    ===================================================================== */
 function voteFig(L, sc, S, X, P) {
+  if (sc.vote.layout === 'gallery') return galleryFig(L, sc, S, X, P);
   const v = sc.vote, m = v.opts.length, tot = S.votes[sc.id] || new Array(m).fill(0), sum = tot.reduce((a, b) => a + b, 0), st = S.st;
   let out = '';
   /* gauche : figure de la scène ou, à défaut, la question en grand */
@@ -90,6 +105,30 @@ function voteFig(L, sc, S, X, P) {
   });
   return out;
 }
+/* Vote « galerie » (v3.1, WP3) : le contexte (question, carte) à gauche — v.draw, dans x < 58 — et quatre options FIGURÉES en grille 2 × 2 à droite.
+   Chaque mauvaise réponse est la figure du malentendu (v.optFig(c, box, X), calculée par le moteur) : le vote diagnostique et la salle voit pourquoi c'est faux.
+   Une option = une lettre en gros + sa figure, SANS autre texte ; mêmes règles que les cartes (décompte, barre, ✓ / ✗, revote). d = lettre affichée, ci = option canonique. */
+function galleryFig(L, sc, S, X, P) {
+  const v = sc.vote, m = P.length, tot = S.votes[sc.id] || new Array(m).fill(0), sum = tot.reduce((a, b) => a + b, 0), st = S.st, rev = st >= 2, pre = S.pre && S.pre[sc.id], ps = pre ? pre.reduce((a, b) => a + b, 0) : 0;
+  let out = K.g(v.draw(st, X), {});
+  const cw = 48, chh = 32.5, x0 = 60, y0 = 2, gx = 2, gy = 1.5;
+  P.forEach((ci, d) => {
+    const o = v.opts[ci], ok = o.ok, col = rev && ok ? K.C.green : K.C.ink, x = x0 + (d % 2) * (cw + gx), y = y0 + (d >> 1) * (chh + gy), fb = { x: x + 1, y: y + 7.6, w: cw - 2, h: chh - 7.6 - 3.4 };
+    let c = K.rect(x, y, cw, chh, { fill: rev && ok ? '#e3f5ea' : K.C.paper, stroke: col, w: rev && ok ? 1 : .6, rx: 1.4 });
+    c += v.optFig(ci, fb, X);
+    c += K.badge(x + 4.8, y + 4.4, LET[d], { r: 3.4, fill: col, size: 4.6 });
+    if (st >= 1) {
+      const n = tot[ci] || 0, bw = sum ? (cw - 3) * n / sum : 0;
+      c += K.rect(x + 1.5, y + chh - 2.6, cw - 3, 1.5, { fill: K.C.soft, rx: .7 }) + (bw ? K.rect(x + 1.5, y + chh - 2.6, bw, 1.5, { fill: rev ? (ok ? K.C.green : K.C.red) : K.C.blue, rx: .7 }) : '');
+      c += K.txt(x + cw - (rev ? 13 : 4), y + 4.4, String(n), { size: 5.4, anchor: 'end', w: 800, fixed: true });   // taille fixe : l'en-tête de la case n'a pas de marge (4:3 / salle)
+      if (ps) c += K.rect(x + 1.5, y + chh - 1.05, (cw - 3) * (pre[ci] || 0) / ps, .8, { fill: K.C.mute, rx: .4 });
+    }
+    if (rev) c += ok ? K.path(`M${x + cw - 9.2} ${y + 4.8}l2 2.2l4.2-5`, { stroke: K.C.green, w: 1.1 }) : K.path(`M${x + cw - 9} ${y + 2.6}l3.4 3.4M${x + cw - 5.6} ${y + 2.6}l-3.4 3.4`, { stroke: K.C.red, w: 1 });
+    const label = v.label ? v.label(ci, X) : t(key(L, sc, 'o' + ci));
+    out += K.el('g', { 'data-vote': d, class: 'st-l-card' + (rev && !ok ? ' dimf' : ''), role: 'button', 'aria-label': `${LET[d]} : ${label}` }, c);
+  });
+  return out;
+}
 /* diagnostic : l'option fausse la plus choisie → malentendu NOMMÉ (ids de data/errors.js ou propres au Stage) */
 function diagnosis(sc, S) {
   const tot = S.votes[sc.id] || [], opts = sc.vote.opts; let best = -1, bi = -1;
@@ -106,10 +145,11 @@ export function mountLesson(root, id, arg) {
   const prefs = loadPrefs(); setLang(prefs.lang || 'fr');
   const S = { pre: {}, sc: Math.max(0, Math.min(L.scenes.length - 1, (+arg || 1) - 1)), st: 0, pi: 0, rs: prefs.rs || 1, theme: prefs.theme || 'light', seed: prefs.seed || L.seed || 12, votes: {}, hint: !!prefs.hint, blank: false, help: false, fwd: true, tEnd: 0, tTot: 0 };
   document.body.classList.add('stage-on');
-  const el = h('div', { class: 'stg st-l', 'data-theme': S.theme });
+  const el = h('div', { class: 'stg st-l' + (L.thread ? ' has-thread' : ''), 'data-theme': S.theme });
   el.innerHTML = `<header class="st-l-top"><span class="st-l-kind" id="lKind"></span><h1 class="st-l-claim" id="lClaim"></h1><span class="st-l-n" id="lN"></span></header>
    <main class="st-l-fig" id="lFig"><svg id="lSvg" viewBox="0 0 ${K.W} ${K.H}" preserveAspectRatio="xMidYMid meet" role="img"></svg><div class="st-l-ov" id="lOv"></div></main>
    <footer class="st-l-cap"><p class="st-l-text" id="lCap" aria-live="polite"></p><div class="st-l-side" id="lSide"></div></footer>
+   <nav class="st-l-thread" id="lThread" aria-label="${esc(t('th.aria'))}" data-draft="${L.thread ? 'true' : ''}"></nav>
    <nav class="st-l-rail" id="lRail" aria-label="${esc(t('lk.rail'))}"></nav>
    <div class="st-l-tools" id="lTools"></div><div class="st-l-blank" id="lBlank"></div><div class="st-l-help" id="lHelp" role="dialog"></div>
    <div class="st-l-test" id="lTest" role="dialog"><h2>${t('lk.test.title')}</h2><p class="st-l-tp">${t('lk.test.how')}</p>
@@ -186,6 +226,7 @@ export function mountLesson(root, id, arg) {
     const kinds = L.scenes.map(s => s.kind), run = passiveRun(kinds, S.sc, K.ACTIVE);
     el.querySelectorAll('.st-l-dot').forEach((d, i) => { d.classList.toggle('on', i === S.sc); d.classList.toggle('dn', i < S.sc); });
     $('#lRail').classList.toggle('warn', run >= 4);
+    if (L.thread) { const th = $('#lThread'); th.innerHTML = threadHtml(L, sc); th.classList.toggle('warn', run >= 4); fitThread(th); }
     /* timer */
     clearInterval(timerI);
     if (sc.practice) {
@@ -258,8 +299,8 @@ function mountPresenter(root, L) {
   document.body.classList.add('stage-pv');
   const S = { sc: 0, st: 0, steps: 1, votes: {} }; let live = false, t0 = Date.now(), ts = Date.now(), last = -1;
   const el = h('div', { class: 'pv' }); root.append(el);
-  el.innerHTML = `<h1>${esc(t(L.title))}</h1><p class="pv-status" id="pvStat"></p><div class="pv-grid"><section class="pv-main"><div class="pv-scene" id="pvScene"></div>
-   <div class="pv-card"><h3>${t('pres.note')}</h3><p id="pvNote"></p></div><div class="pv-card ask"><h3>${t('pres.question')}</h3><p id="pvAsk"></p></div><div class="pv-card" id="pvVotes"></div><div class="pv-card"><h3>${t('pres.next')}</h3><p id="pvNext"></p></div></section>
+  el.innerHTML = `<h1>${esc(t(L.title))}</h1>${L.draft ? `<p class="pv-warn">${esc(t('th.draft'))}</p>` : ''}<p class="pv-status" id="pvStat"></p><div class="pv-grid"><section class="pv-main"><div class="pv-scene" id="pvScene"></div>
+   <div class="pv-card"><h3>${t('pres.note')}${L.thread || L.draft ? ' <small class="pv-dr">· ' + esc(t('th.draft')) + '</small>' : ''}</h3><p id="pvNote"></p></div><div class="pv-card ask"><h3>${t('pres.question')}</h3><p id="pvAsk"></p></div><div class="pv-card" id="pvVotes"></div><div class="pv-card"><h3>${t('pres.next')}</h3><p id="pvNext"></p></div></section>
    <section class="pv-side"><div class="pv-card"><h3>${t('pres.timer')}</h3><p class="pv-time"><b id="pvT"></b> · ${t('pres.sceneTimer')} <b id="pvTs"></b></p></div>
    <div class="pv-card"><h3>${t('pres.controls')}</h3><div class="pv-btns">${[['prev', t('lk.prev')], ['next', t('lk.next')], ['pdn', '−'], ['pup', '+'], ['regen', t('lk.regen')], ['blank', t('lk.blank')]].map(([a, l]) => `<button class="pv-b" data-a="${a}">${esc(l)}</button>`).join('')}</div>
    <div class="pv-btns">${[0, 1, 2, 3].map(i => `<button class="pv-b" data-a="vote" data-v="${i}">+ ${LET[i]}</button>`).join('')}<button class="pv-b" data-a="revote">${t('pi.revote')}</button></div><div id="pvPi"></div></div>
@@ -268,14 +309,17 @@ function mountPresenter(root, L) {
   let ch = null; try { ch = new BroadcastChannel('gc-stage-L-' + L.id); } catch (e) { }
   const send = (a, v) => ch && ch.postMessage({ t: 'cmd', a, v });
   el.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) send(b.dataset.a, b.dataset.v != null ? +b.dataset.v : undefined); });
+  /* malentendu dominant : la mauvaise réponse la plus choisie, avec sa correction (guide de remédiation, pas de texte propre à la scène) */
+  const domMis = (sc, v) => { const tot = v || [], ok = sc.vote.opts.findIndex(o => o.ok); let b = -1; sc.vote.opts.forEach((o, i) => { if (i !== ok && o.mis && (tot[i] || 0) > 0 && (b < 0 || tot[i] > tot[b])) b = i; }); if (b < 0) return ''; const id = sc.vote.opts[b].mis; return has('mis.' + id) ? `<div class="pv-dom"><b>${esc(t('pres.dom'))}</b> : ${esc(t('mis.' + id))}${has('mis.' + id + '.why') ? ' — ' + esc(t('mis.' + id + '.why')) : ''}</div>` : ''; };
   const draw = () => {
     const sc = L.scenes[S.sc]; if (S.sc !== last) { ts = Date.now(); last = S.sc; }
-    $('#pvScene').innerHTML = `<span class="pv-no">${S.sc + 1}</span><div><h2>${esc(t(key(L, sc, 'claim')))}</h2><p>${t('kind.' + sc.kind)} · ${t('lk.step', { a: S.st + 1, b: S.steps })}</p></div>`;
+    const tn = threadNote(L, sc);
+    $('#pvScene').innerHTML = `<span class="pv-no">${S.sc + 1}</span><div><h2>${esc(t(key(L, sc, 'claim')))}</h2><p>${t('kind.' + sc.kind)} · ${t('lk.step', { a: S.st + 1, b: S.steps })}</p>${tn ? `<p class="pv-th">${esc(tn)}</p>` : ''}</div>`;
     $('#pvNote').textContent = has(key(L, sc, 'note')) ? t(key(L, sc, 'note')) : '—'; $('#pvAsk').textContent = has(key(L, sc, 'ask')) ? t(key(L, sc, 'ask')) : '—';
     const nx = L.scenes[S.sc + 1]; $('#pvNext').textContent = nx ? t(key(L, nx, 'claim')) : '—';
     el.querySelectorAll('#pvList .pv-b').forEach((b, i) => b.classList.toggle('on', i === S.sc));
     const v = S.votes[sc.id]; $('#pvVotes').style.display = sc.kind === 'vote' ? '' : 'none';
-    if (sc.kind === 'vote') { const sum = (v || []).reduce((a, b) => a + b, 0) || 1; $('#pvVotes').innerHTML = `<h3>${t('lk.votes', { n: (v || []).reduce((a, b) => a + b, 0) })}</h3>` + ((m) => m ? `<div class="st-l-pi pi-${m.band}"><b>${m.pct} %</b> ${t('pi.' + m.band)}</div>` : '')(mazur(v, sc.vote.opts.findIndex(o => o.ok))) + optionOrder(sc.vote.opts.length, L.id + '.' + sc.id, S.seed, !!sc.vote.fixed).map((c, d) => `<div class="pv-bar"><b>${LET[d]}</b><i style="width:${Math.round(100 * ((v || [])[c] || 0) / sum)}%"></i><span>${(v || [])[c] || 0}</span></div>`).join(''); }
+    if (sc.kind === 'vote') { const sum = (v || []).reduce((a, b) => a + b, 0) || 1; $('#pvVotes').innerHTML = `<h3>${t('lk.votes', { n: (v || []).reduce((a, b) => a + b, 0) })}</h3>` + ((m) => m ? `<div class="st-l-pi pi-${m.band}"><b>${m.pct} %</b> ${t('pi.' + m.band)}</div>` : '')(mazur(v, sc.vote.opts.findIndex(o => o.ok))) + domMis(sc, v) + optionOrder(sc.vote.opts.length, L.id + '.' + sc.id, S.seed, !!sc.vote.fixed).map((c, d) => `<div class="pv-bar"><b>${LET[d]}</b><i style="width:${Math.round(100 * ((v || [])[c] || 0) / sum)}%"></i><span>${(v || [])[c] || 0}</span></div>`).join(''); }
   };
   const stat = () => { $('#pvStat').textContent = live ? t('pres.connected') : t('pres.waiting'); $('#pvStat').className = 'pv-status ' + (live ? 'ok' : ''); };
   if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'state') { Object.assign(S, m.S); live = true; stat(); draw(); } };
@@ -300,7 +344,8 @@ export function lessonIndex(root) {
     return href ? `<a class="st-ix-c" href="${href}">${inner}</a>` : `<div class="st-ix-c off">${inner}</div>`;
   }).join('');
   const pro = lessonById('mission'), proCard = pro ? `<a class="st-ix-c st-ix-pro" href="#/stage/mission"><span class="st-ix-n">0</span><span class="st-ix-b"><b>${esc(t('ix.pro'))}</b><small>${esc(t('ix.pro.d'))}</small></span><span class="st-ix-s st-ix-v2">${t('ix.v2')} · ${pro.scenes.reduce((a, s) => a + (s.min || 2), 0)} min</span></a>` : '';
-  root.innerHTML = `<h1>🎞️ ${t('ix.title')}</h1><p class="lead">${t('ix.lead')}</p><div class="st-ix">${proCard}${cards}</div>
+  const pre = lessonById('prereq'), preCard = pre ? `<a class="st-ix-c st-ix-pro" href="#/stage/prereq"><span class="st-ix-n">↺</span><span class="st-ix-b"><b>${esc(t('ix.pre'))}</b><small>${esc(t('ix.pre.d'))}</small></span><span class="st-ix-s st-ix-v2">${esc(t('th.draft'))} · ${pre.scenes.reduce((a, s) => a + (s.min || 2), 0)} min</span></a>` : '';
+  root.innerHTML = `<h1>🎞️ ${t('ix.title')}</h1><p class="lead">${t('ix.lead')}</p><div class="st-ix">${proCard}${preCard}${cards}</div>
    <div class="box tip"><b class="t">💡</b>${t('ix.tip')}</div>
-   <p><a class="btn" href="#/stage/courbes/presenter">${t('ix.v1pres')}</a> <a class="btn" href="#/stage/lib">${t('lib.title')}</a> <a class="btn" href="#/stage/bilan">${t('bilan.title')}</a></p>`;
+   <p><a class="btn" href="#/stage/courbes/presenter">${t('ix.v1pres')}</a> <a class="btn" href="#/stage/fil">${t('th.title')}</a> <a class="btn" href="#/stage/lib">${t('lib.title')}</a> <a class="btn" href="#/stage/bilan">${t('bilan.title')}</a></p>`;
 }

@@ -13,6 +13,7 @@ export const FR = {
   'lk.test.a': 'A · étiquettes', 'lk.test.b': 'B · légende', 'lk.test.c': 'C · chiffre clé', 'lk.test.rs': 'Taille de salle actuelle : × {rs}. A nette ⇒ toutes les figures le seront. Réglage mémorisé sur cet appareil.',
   'ix.pro': 'Prologue : la mission', 'ix.pro.d': 'Un camp, un refuge, un terrain : six questions de topographie, puis deux de géologie', 'ix.title': 'Mode Stage — le TP en projection', 'ix.lead': 'Onze thèmes, dans l’ordre du cours. Une idée par scène, lisible depuis le dernier rang, sans zoom.',
   'ix.v2': 'Leçon Stage', 'ix.v1': 'Deck Stage (v1)', 'ix.plan': 'Planifié', 'ix.v1pres': 'Vue enseignant du deck « Courbes »',
+  'pres.dom': 'Malentendu dominant',
   'pi.s.low': 'réexpliquez', 'pi.s.mid': 'discutez 2 min, puis R', 'pi.s.high': 'on passe', 'lk.h.hint': 'Indication enseignant (% de bonnes réponses)',
   'pi.low': 'de bonnes réponses : pas acquis — réexpliquez, puis revotez.', 'pi.mid': 'de bonnes réponses : discutez par deux 2 min, puis revotez (R).', 'pi.high': 'de bonnes réponses : acquis — corrigez et passez.', 'pi.round2': '2ᵉ tour', 'pi.revote': 'Revote (R)', 'lk.h.revote': 'Revoter après discussion (instruction par les pairs)',
   'lib.title': 'Bibliothèque des malentendus', 'lib.lead': '{n} erreurs fréquentes, nommées : chacune est un piège testé dans un vote, avec sa correction.', 'lib.chosen': 'choix en salle',

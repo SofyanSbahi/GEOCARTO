@@ -65,6 +65,9 @@ const monoV = () => fromDem({ type: 'vallee', seed: 5 }, 'monoclinal', 5, 40);
 export const KINDS_ORDER = GAL.map(g => g[0]);
 export const galerie = kind => GAL.find(g => g[0] === kind)[1]();
 export const monoValley = monoV;
+/* « Quelle forme en coupe ? » : l'anticlinal de la galerie et trois structures construites sur LE MÊME terrain (mêmes courbes, même profil de surface) —
+   les mauvaises réponses du vote sont les coupes qu'on obtient avec le malentendu (cuvette, bandes inclinées, couches horizontales). Ordre = ordre canonique du vote. */
+export const foldGeos = () => memo('fold4', () => { const G0 = galerie('anticlinal'); return G.foldVariants(G0.geo.dem, 2).map(v => ({ id: v.id, kind: v.kind, ctx: v.id === 'ok' ? G0 : { ...prep(v.geo), eq: 40 } })); });
 /* exercice : monoclinal raide sur le terrain « vallée », trois points sur le premier contact exploitable */
 /* le contact le plus « lisible » d'une carte : celui dont le triangle des trois points a la plus grande base horizontale d */
 const bestTp = geo => { let tp = null; for (let u = 0; u < geo.units.length - 1; u++) { const t = threePoints(geo, u, u + 1); if (t && (!tp || t.d > tp.d)) tp = t; } return tp; };

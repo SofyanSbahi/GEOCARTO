@@ -51,6 +51,13 @@ const PROBE = () => {
   const tal = document.querySelector('.st-l-tally'); out.tallyPct = tal ? parseFloat(getComputedStyle(tal).fontSize) / H * 100 : null;
   const tim = document.querySelector('.st-l-timer b'); out.timerPct = tim ? parseFloat(getComputedStyle(tim).fontSize) / H * 100 : null;
   out.hasBanner = !!document.querySelector('#lSide .st-l-pi');
+  out.hasThread = document.querySelector('.st-l').classList.contains('has-thread');
+  if (out.hasThread) {                                                    // fil du raisonnement (WP2)
+    const th = document.querySelector('#lThread'), ol = th.firstElementChild, tr = th.getBoundingClientRect(), on = th.querySelector('.st-th.on span');
+    out.th = { overflow: !ol || ol.scrollWidth > th.clientWidth + 1, count: th.querySelectorAll('.st-th').length, on: th.querySelectorAll('.st-th.on').length, cur: th.querySelectorAll('[aria-current]').length,
+      pct: on ? parseFloat(getComputedStyle(on).fontSize) / H * 100 : 0, hPct: tr.height / H * 100, out: tr.bottom > innerHeight + 1 || tr.width < 10, compact: th.classList.contains('compact'),
+      railInFlow: getComputedStyle(document.querySelector('#lRail')).position !== 'absolute' };
+  }
   out.railOut = document.querySelector('#lRail').getBoundingClientRect().bottom > innerHeight + 1;
   out.headPct = document.querySelector('.st-l-top').getBoundingClientRect().height / H * 100;
   return out;
@@ -95,7 +102,16 @@ for (const [W, H] of VIEWS) for (const rs of RS) {
         if (r.calloutOverText.length) fail(cfg, id, `L4 bulle sur le texte « ${r.calloutOverText[0]} »`);
         if (r.hOut) fail(cfg, id, 'L4 rognage horizontal');
         if (r.capClipped) fail(cfg, id, 'L4 légende tronquée');
-        if (r.railOut) fail(cfg, id, 'L4 le rail de navigation sort de l\'écran');
+        if (r.hasThread && !r.th.out && r.th.railInFlow) fail(cfg, id, 'L4 le rail occupe encore une rangée à côté du fil');
+        if (r.hasThread) {
+          if (r.th.count !== 6) fail(cfg, id, `L4 fil : ${r.th.count} étapes au lieu de 6`);
+          if (r.th.overflow) fail(cfg, id, 'L4 fil : dépasse la largeur');
+          if (r.th.out) fail(cfg, id, 'L4 fil : hors de l\'écran');
+          if (!(r.th.on === 6 || (r.th.on === 1 && r.th.cur === 1))) fail(cfg, id, `L4 fil : étape courante ambiguë (${r.th.on} pleines, ${r.th.cur} courantes)`);
+          if (rs >= 1 && r.th.pct < 3.8 - .05) fail(cfg, id, `L1 fil : nom de l'étape ${r.th.pct.toFixed(1)} % < 3,8 %`);
+          if (r.th.hPct > 9.6) fail(cfg, id, `L4 fil : trop haut (${r.th.hPct.toFixed(1)} %)`);
+          (perCfg[cfg].compact ||= 0); if (r.th.compact) perCfg[cfg].compact++;
+        } else if (r.railOut) fail(cfg, id, 'L4 le rail de navigation sort de l\'écran');
         if (r.headPct > 12.5) fail(cfg, id, `L4 titre trop haut (${r.headPct.toFixed(0)} % de l\'écran)`);
         if (r.capWidth < .4) fail(cfg, id, `L4 légende écrasée (${Math.round(r.capWidth * 100)} % de la largeur)`);
         if (r.hasBanner) fail(cfg, id, 'L4 le bandeau d\'instruction est de retour sur l\'écran projeté');
@@ -115,11 +131,11 @@ for (const [W, H] of VIEWS) for (const rs of RS) {
 }
 await browser.close();
 console.log(`${seen.screens} écrans, ${seen.votes} votes simulés, ${VIEWS.length} format(s) × ${RS.length} échelle(s) de salle, leçons : ${LESSONS.join(', ')}\n`);
-for (const [cfg, v] of Object.entries(perCfg)) console.log(`${cfg.padEnd(18)} ${String(v.n).padStart(4)} écrans · ${v.bad ? v.bad + ' défaut(s)' : 'OK'}`);
+for (const [cfg, v] of Object.entries(perCfg)) console.log(`${cfg.padEnd(18)} ${String(v.n).padStart(4)} écrans · ${v.bad ? v.bad + ' défaut(s)' : 'OK'}${v.compact != null ? ` · fil réduit sur ${v.compact} écrans` : ''}`);
 if (fails.length) {
   /* regroupé par format/échelle et par type de défaut, avec quelques exemples */
   const groups = new Map();
-  for (const f of fails) { const m = f.match(/^(.*?) · (\S+) : (\S+(?: \S+)?)/); const key = `${m[1]} · ${m[3]}`; const g = groups.get(key) || { n: 0, ex: [] }; g.n++; if (g.ex.length < 3) g.ex.push(m[2]); groups.set(key, g); }
+  for (const f of fails) { const m = f.match(/^(.*?) · (\S+) : (\S+(?: \S+){0,3})/); const key = `${m[1]} · ${m[3]}`; const g = groups.get(key) || { n: 0, ex: [] }; g.n++; if (g.ex.length < 3) g.ex.push(m[2]); groups.set(key, g); }
   console.log('\nDÉFAUTS (' + fails.length + ') par format · échelle · type :');
   for (const [k, g] of groups) console.log(`  ${String(g.n).padStart(3)} × ${k}   ex. ${g.ex.join(', ')}`);
   process.exit(1);
