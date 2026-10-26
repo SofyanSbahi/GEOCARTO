@@ -8,5 +8,6 @@ rm -rf site && mkdir -p site
 cp index.html config.js sw.js manifest.webmanifest icon.svg site/
 cp -R css img dist site/
 cp vendor/THREE-LICENSE site/THIRD-PARTY-LICENSES.txt     # three.js (MIT) : sa licence exige de conserver l'avis ; l'avis est aussi dans dist/app.js
+cp tools/site-extra/COPYRIGHT.txt tools/site-extra/CREDITS.txt tools/site-extra/robots.txt site/   # avis de droits, crédits des illustrations, non-référencement
 touch site/.nojekyll
 echo "site/ prêt : $(find site -type f | wc -l) fichiers, $(du -sh site | cut -f1)"

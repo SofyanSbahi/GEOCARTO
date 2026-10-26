@@ -1,5 +1,5 @@
 /* Défi hebdomadaire : même énoncé pour tous (graine = semaine), bonus XP */
-import {h,rng,fitCanvas} from '../core/util.js';
+import {h,rng,fitCanvas,esc} from '../core/util.js';
 import {makeDem,suggestLine,autoEq} from '../core/terrain.js';
 import {state,weeklyDone,addXp,skill,chapterExo} from '../core/store.js';
 import {weekKey,ORDER} from '../core/adapt.js';
@@ -15,7 +15,7 @@ export default async function(root){const wk=weekKey(),R=rng(hashStr(wk)),W=stat
  root.innerHTML=`<h1>🏁 Défi de la semaine <small class="mute">${wk}</small></h1><p class="lead">Même défi pour tous cette semaine : un profil topographique et 5 exercices tirés de 5 chapitres. Bonus : +60 XP.</p>
  <div class="card"><h3>1. Profil du défi</h3><p>Terrain « ${type} » · échelle 1/${scaleN.toLocaleString('fr')} · mode Intermédiaire. ${W.profile!=null?`<b>Score : ${W.profile}/100 ${W.profile>=65?'✅':'(≥ 65 requis)'}</b>`:''}</p><button class="btn" id="pf">Lancer le profil</button></div>
  <div class="card"><h3>2. Cinq exercices</h3><p class="mute">Chapitres : ${chs.join(', ')}. ${W.ex!=null?`<b>Résultat : ${W.ex}/5</b>`:''}</p><div id="ex"></div></div>
- ${assign?`<div class="card"><h3>📌 Défi du professeur : ${assign.title||'devoir'}</h3><p>Terrain « ${assign.type} », graine ${assign.seed}, échelle 1/${assign.scaleN}. ${assign.due?`À rendre avant le ${assign.due}.`:''}</p><button class="btn blue" id="as">Lancer</button></div>`:''}
+ ${assign?`<div class="card"><h3>📌 Défi du professeur : ${esc(assign.title||'devoir')}</h3><p>Terrain « ${esc(assign.type)} », graine ${esc(assign.seed)}, échelle 1/${esc(assign.scaleN)}. ${assign.due?`À rendre avant le ${esc(assign.due)}.`:''}</p><button class="btn blue" id="as">Lancer</button></div>`:''}
  <div class="card"><h3>Importer un devoir</h3><div class="ctrl"><input type="text" id="ic" placeholder="Code devoir de l'enseignant" style="width:min(300px,100%)"><button class="btn sm sec" id="ib">Importer</button></div></div><div id="fin"></div>`;
  root.querySelector('#ib').onclick=()=>{try{const o=JSON.parse(decodeURIComponent(escape(atob(root.querySelector('#ic').value.trim()))));if(!o.seed||!o.type)throw 0;localStorage.setItem('gc_assign',JSON.stringify(o));toast('Devoir importé');location.reload()}catch(e){toast('Code invalide')}};
  root.querySelector('#pf').onclick=()=>{const d=makeDem({type,seed,scaleN}),eq=autoEq(d),l=suggestLine(d,eq,rng(seed));shared.handoff={opts:{type,seed,scaleN},A:l.A,B:l.B};shared.returnTo='#/defi';shared.hook=r=>{if(r.stage==='profile')weeklyDone(wk,{profile:r.score})};location.hash='#/profil'};

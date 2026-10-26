@@ -1,0 +1,11 @@
+GéoCarto — © Sofyan Sbahi. Tous droits réservés.
+
+Cette application est mise à disposition par lien pour l'enseignement. L'accès au lien ne confère aucun droit de copie, de
+redistribution, de modification ou de réutilisation du code, des textes, des exercices ou de l'organisation pédagogique,
+sauf autorisation écrite de l'auteur.
+
+Les éléments de tiers restent la propriété de leurs détenteurs (voir CREDITS.txt).
+Bibliothèque embarquée : three.js, licence MIT (voir THIRD-PARTY-LICENSES.txt).
+
+Contenu pédagogique : une partie du contenu des leçons Stage (fil du raisonnement, notes enseignant, leçon préalable) est un
+brouillon automatique à relire par un géologue ; il ne remplace pas le cours.

@@ -1,0 +1,51 @@
+# Publication GitHub Pages : seul le dossier site/ est publié (jamais js/, tests/, docs/, tools/, README).
+# Déclenchement MANUEL (Actions → « Publier site/ sur GitHub Pages » → Run workflow) : rien n'est publié automatiquement.
+# Prérequis (à faire une fois par le propriétaire) : Settings → Pages → Source = « GitHub Actions ».
+name: Publier site/ sur GitHub Pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run check:dist          # dist/app.js doit être reproductible
+      - run: sh tools/make-site.sh
+      - name: Contrôle de contenu de site/ (aucun code source, aucun document)
+        run: |
+          set -e
+          bad=$(find site \( -name '*.md' -o -name 'package*.json' -o -name '*.mjs' -o -name '*.py' -o -name 'build.sh' \) -o -path 'site/js' -o -path 'site/tests' -o -path 'site/docs' -o -path 'site/tools' -o -path 'site/node_modules' -o -path 'site/.git' | head)
+          [ -z "$bad" ] || { echo "Fichiers interdits dans site/ :"; echo "$bad"; exit 1; }
+          test -f site/index.html && test -f site/dist/app.js && test -f site/COPYRIGHT.txt
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

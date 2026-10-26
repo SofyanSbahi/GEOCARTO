@@ -5,6 +5,10 @@ export {clamp,lerp,sstep,rng,fr,parseNum,norm,DIRS16,dirName,azimuth};
 export const $=(s,r=document)=>r.querySelector(s);
 export const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 export function h(tag,attrs={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs||{})){if(k==='class')e.className=v;else if(k==='html')e.innerHTML=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(v!==false&&v!=null)e.setAttribute(k,v===true?'':v)}for(const c of kids.flat())if(c!=null)e.append(c.nodeType?c:document.createTextNode(c));return e}
+/* Échappement HTML : TOUTE donnée venant d'un élève, d'un fichier importé ou du stockage local doit passer par esc() avant d'entrer dans un innerHTML ou un attribut (v3.1 rc.3). */
+export const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* Cellule CSV : neutralise l'injection de formule (=, +, -, @, tabulation en tête) à l'ouverture dans un tableur ; guillemets doublés si besoin. */
+export const csvCell=v=>{let s=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(s))s="'"+s;return /[";\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
 export const shuffle=(a,R=Math.random)=>_shuffle(a,R);
 export const pick=(a,R=Math.random)=>_pick(a,R);
 export const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
