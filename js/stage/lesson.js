@@ -7,7 +7,7 @@ import './fr.js';
 import './lessons/fr.js';
 import { t, nf, setLang, has } from './i18n.js';
 import * as K from './kit.js';
-import { TOPICS, lessonById } from './lessons/index.js';
+import { TOPICS, lessonById, nextLesson, prevLesson, OPTIONAL } from './lessons/index.js';
 import { h } from '../core/util.js';
 import { loadPrefs, savePrefs, logVote, unitPx, fmtClock, safeHtml, words, passiveRun, mazur, optionOrder, invertOrder, chromeUnit } from './tools.js';
 import { pickExo } from '../engine/pedagogy/index.js';
@@ -151,7 +151,7 @@ export function mountLesson(root, id, arg) {
    <footer class="st-l-cap"><p class="st-l-text" id="lCap" aria-live="polite"></p><div class="st-l-side" id="lSide"></div></footer>
    <nav class="st-l-thread" id="lThread" aria-label="${esc(t('th.aria'))}" data-draft="${L.thread ? 'true' : ''}"></nav>
    <nav class="st-l-rail" id="lRail" aria-label="${esc(t('lk.rail'))}"></nav>
-   <div class="st-l-tools" id="lTools"></div><div class="st-l-blank" id="lBlank"></div><div class="st-l-help" id="lHelp" role="dialog"></div>
+   <div class="st-l-tools" id="lTools"></div><div class="st-l-blank" id="lBlank"></div><div class="st-l-end" id="lEnd" role="dialog" aria-live="polite"></div><div class="st-l-help" id="lHelp" role="dialog"></div>
    <div class="st-l-test" id="lTest" role="dialog"><h2>${t('lk.test.title')}</h2><p class="st-l-tp">${t('lk.test.how')}</p>
     <div class="st-l-trow"><b>A</b><span style="font-size:calc(var(--u)*3.4)">${t('lk.test.a')} — Éq = 40 m · 720 m · 640 m</span></div>
     <div class="st-l-trow"><b>B</b><span style="font-size:calc(var(--u)*4.9)">${t('lk.test.b')} — Éq = 40 m</span></div>
@@ -168,7 +168,7 @@ export function mountLesson(root, id, arg) {
   $('#lRail').innerHTML = L.scenes.map((s, i) => `<button class="st-l-dot" data-go="${i}" data-kind="${s.kind}" aria-label="${esc(t(key(L, s, 'claim')))}">${kindIc(s.kind)}</button>`).join('');
   $('#lHelp').innerHTML = `<div class="st-l-hbox"><h2>${t('lk.helpTitle')}</h2>${['→ / Espace|lk.h.next', '←|lk.h.prev', '↑ ↓|lk.h.param', 'A B C D|lk.h.vote', 'B|lk.h.blank', 'T|lk.h.theme', '+ −|lk.h.size', 'R|lk.h.revote', 'I|lk.h.hint', 'N|lk.h.regen', 'K|lk.h.test', 'F · P · Échap|lk.h.misc'].map(r => { const [k, v] = r.split('|'); return `<div class="st-l-hrow"><kbd>${k}</kbd><span>${t(v)}</span></div>`; }).join('')}</div>`;
 
-  const post = () => ch && ch.postMessage({ t: 'state', S: { sc: S.sc, st: S.st, pi: S.pi, seed: S.seed, votes: S.votes, pre: S.pre, steps: nS() } });
+  const post = () => ch && ch.postMessage({ t: 'state', S: { sc: S.sc, st: S.st, pi: S.pi, seed: S.seed, votes: S.votes, pre: S.pre, steps: nS(), end: !!S.end } });
   let timerI = 0;
 
   function render() {
@@ -240,9 +240,15 @@ export function mountLesson(root, id, arg) {
     try { history.replaceState(null, '', `#/stage/${L.id}/${S.sc + 1}`); } catch (e) { }
     post();
   }
-  const go = (sc, st) => { S.fwd = sc > S.sc || (sc === S.sc && st >= S.st); if (sc !== S.sc) { S.swap = true; S.pi = L.scenes[sc].param?.start || 0; S.tEnd = 0; } S.sc = sc; S.st = st; render(); };
-  const next = () => { const n = nS(); if (S.st < n - 1) go(S.sc, S.st + 1); else if (S.sc < L.scenes.length - 1) go(S.sc + 1, 0); else { location.hash = '#/stage'; } };
-  const prev = () => { if (S.st > 0) go(S.sc, S.st - 1); else if (S.sc > 0) { const p = S.sc - 1; go(p, stepsOf(L.scenes[p], ctx()) - 1); } };
+  const go = (sc, st) => { if (S.end) endCard(false); S.fwd = sc > S.sc || (sc === S.sc && st >= S.st); if (sc !== S.sc) { S.swap = true; S.pi = L.scenes[sc].param?.start || 0; S.tEnd = 0; } S.sc = sc; S.st = st; render(); };
+  const next = () => { const n = nS(); if (S.st < n - 1) go(S.sc, S.st + 1); else if (S.sc < L.scenes.length - 1) go(S.sc + 1, 0); else if (!S.end) endCard(true); else { const n = nextLesson(L.id); if (n) goLesson(n); } };
+  /* rc.6 : carte de fin de leçon (remplace le retour au menu Stage, que la salle voyait) ; aucune leçon n'est modifiée */
+  const endCard = on => { S.end = on; const n = nextLesson(L.id), nl = n && lessonById(n), e = $('#lEnd');
+    if (on) e.innerHTML = `<div class="st-l-endin"><p class="st-l-endok">✓ ${esc(t('end.done'))}</p><h2>${esc(t(L.title))}</h2>${nl ? `<p class="st-l-endnx">${esc(t('end.next'))} : <b>${esc(t(nl.title))}</b> →</p>` : `<p class="st-l-endnx"><b>${esc(t('end.session'))}</b></p>`}<p class="st-l-endh">${esc(t(nl ? 'end.hint' : 'end.hint0'))}</p></div>`;
+    e.classList.toggle('on', on); post(); };
+  /* passage à une autre leçon : la vue enseignant est prévenue et suit */
+  const goLesson = id => { if (!lessonById(id)) return; ch && ch.postMessage({ t: 'lesson', id }); location.hash = '#/stage/' + id + '/1'; };
+  const prev = () => { if (S.end) { endCard(false); return; } if (S.st > 0) go(S.sc, S.st - 1); else if (S.sc > 0) { const p = S.sc - 1; go(p, stepsOf(L.scenes[p], ctx()) - 1); } };
   const param = d => { const sc = L.scenes[S.sc]; if (!sc.param) return; const n = sc.param.values.length; S.pi = (S.pi + d + n) % n; S.fwd = true; render(); };
   /* i = lettre affichée (touche a–d, clic, présentateur) ; le décompte est tenu en ordre canonique */
   const vote = (i, d = 1) => { const sc = L.scenes[S.sc]; if (sc.kind !== 'vote' || i >= sc.vote.opts.length) return; const c = orderOf(sc)[i]; const a = S.votes[sc.id] || (S.votes[sc.id] = new Array(sc.vote.opts.length).fill(0)); a[c] = Math.max(0, a[c] + d); if (S.st === 0) S.st = 1; S.fwd = false; render(); };
@@ -286,7 +292,7 @@ export function mountLesson(root, id, arg) {
   const beat = setInterval(() => post(), BEAT);   // rc.5 : présence pour la vue enseignant (aucun effet à l'écran)
   let idleT = 0; el.addEventListener('pointermove', () => { el.classList.add('act'); clearTimeout(idleT); idleT = setTimeout(() => el.classList.remove('act'), 2600); });
   const onResize = () => render(); addEventListener('resize', onResize);
-  if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'hello') post(); else if (m.t === 'cmd') { if (m.a === 'goto') go(m.v, 0); else if (m.a === 'home') go(0, 0); else if (m.a === 'end') go(L.scenes.length - 1, 0); else if (m.a === 'vote') vote(m.v); else if (m.a === 'unvote') vote(m.v, -1); else act(m.a); } };
+  if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'hello') post(); else if (m.t === 'cmd') { if (m.a === 'goto') go(m.v, 0); else if (m.a === 'lesson') goLesson(m.v); else if (m.a === 'home') go(0, 0); else if (m.a === 'end') go(L.scenes.length - 1, 0); else if (m.a === 'vote') vote(m.v); else if (m.a === 'unvote') vote(m.v, -1); else act(m.a); } };
   render();
   return () => { document.body.classList.remove('stage-on'); clearInterval(timerI); clearInterval(beat); removeEventListener('keydown', onKey); removeEventListener('resize', onResize); ch && ch.close(); el.remove(); };
 }
@@ -310,6 +316,7 @@ function mountPresenter(root, L) {
   el.innerHTML = `<h1>${esc(t(L.title))}</h1>${L.draft ? `<p class="pv-warn">${esc(t('th.draft'))}</p>` : ''}<div class="pv-bar"><p class="pv-status" id="pvStat" role="status" aria-live="polite"></p><button class="pv-b pv-open" data-local="open">${esc(t('pres.openStage'))}</button></div>
    <div class="pv-guide" id="pvGuide" hidden><b>${esc(t('pres.g.h'))}</b><ol><li>${esc(t('pres.g.1'))}</li><li>${esc(t('pres.g.2'))}</li><li>${esc(t('pres.g.3'))}</li></ol><button class="pv-b" data-local="guide">${esc(t('pres.g.ok'))}</button></div>
    <div class="pv-nav"><button class="pv-b pv-big" data-a="prev" aria-keyshortcuts="ArrowLeft">◀ ${esc(t('lk.prev'))}</button><span class="pv-pos" id="pvPos"></span><button class="pv-b pv-big pv-next" data-a="next" aria-keyshortcuts="ArrowRight">${esc(t('lk.next'))} ▶</button></div>
+   <div class="pv-lnav" id="pvLnav"></div>
    <div class="pv-grid"><section class="pv-main"><div class="pv-scene" id="pvScene"></div>
    <div class="pv-card"><h3>${t('pres.note')}${L.thread || L.draft ? ' <small class="pv-dr">· ' + esc(t('th.draft')) + '</small>' : ''}</h3><p id="pvNote"></p></div><div class="pv-card ask"><h3>${t('pres.question')}</h3><p id="pvAsk"></p></div><div class="pv-card" id="pvVotes"></div><div class="pv-card"><h3>${t('pres.next')}</h3><p id="pvNext"></p></div></section>
    <section class="pv-side"><div class="pv-card"><h3>${t('pres.timer')}</h3><p class="pv-time"><b id="pvT"></b> · ${t('pres.sceneTimer')} <b id="pvTs"></b></p></div>
@@ -321,7 +328,11 @@ function mountPresenter(root, L) {
   let ch = null; try { ch = new BroadcastChannel('gc-stage-L-' + L.id); } catch (e) { }
   const send = (a, v) => ch && ch.postMessage({ t: 'cmd', a, v });
   const openProj = () => window.open(projUrl(L.id, S.sc + 1), 'gc-stage-proj', 'popup,width=1280,height=760');
-  el.addEventListener('click', e => { const loc = e.target.closest('[data-local]'); if (loc) { if (loc.dataset.local === 'open') openProj(); else { $('#pvGuide').hidden = true; try { sessionStorage.removeItem('gc_dual'); } catch (er) { } } return; }
+  /* rc.6 : navigation entre leçons ; la vue enseignant change de leçon elle-même et demande à la projection de suivre */
+  const toLesson = id => { if (!id || !lessonById(id)) return; ch && ch.postMessage({ t: 'cmd', a: 'lesson', v: id }); location.hash = '#/stage/' + id + '/presenter'; };
+  const pl = prevLesson(L.id), nl = nextLesson(L.id), tt = id => esc(t(lessonById(id).title));
+  $('#pvLnav').innerHTML = `${pl ? `<button class="pv-b" data-local="lesson" data-id="${pl}">◀ ${esc(t('pres.lprev'))} : ${tt(pl)}</button>` : ''}<button class="pv-b" data-local="menu">${esc(t('pres.menu'))}</button>${nl ? `<button class="pv-b pv-lnext" data-local="lesson" data-id="${nl}">${esc(t('pres.lnext'))} : ${tt(nl)} ▶</button>` : ''}${L.id === OPTIONAL.after && lessonById(OPTIONAL.id) ? `<button class="pv-b" data-local="lesson" data-id="${OPTIONAL.id}">${esc(t('pres.lopt'))} : ${tt(OPTIONAL.id)}</button>` : ''}`;
+  el.addEventListener('click', e => { const loc = e.target.closest('[data-local]'); if (loc) { if (loc.dataset.local === 'open') openProj(); else if (loc.dataset.local === 'lesson') toLesson(loc.dataset.id); else if (loc.dataset.local === 'menu') location.hash = '#/stage'; else { $('#pvGuide').hidden = true; try { sessionStorage.removeItem('gc_dual'); } catch (er) { } } return; }
     const b = e.target.closest('[data-a]'); if (b) send(b.dataset.a, b.dataset.v != null ? +b.dataset.v : undefined); });
   /* rc.5 : les touches de la projection fonctionnent aussi ICI (télécommande de présentation, clavier de l'enseignant) et sont relayées */
   const onKey = e => {
@@ -337,10 +348,10 @@ function mountPresenter(root, L) {
   const draw = () => {
     const sc = L.scenes[S.sc]; if (S.sc !== last) { ts = Date.now(); last = S.sc; }
     const tn = threadNote(L, sc);
-    $('#pvPos').textContent = t('pres.pos', { a: S.sc + 1, b: L.scenes.length, c: S.st + 1, d: S.steps || 1 });
+    $('#pvPos').textContent = S.end ? t('pres.endPos') : t('pres.pos', { a: S.sc + 1, b: L.scenes.length, c: S.st + 1, d: S.steps || 1 });
     $('#pvScene').innerHTML = `<span class="pv-no">${S.sc + 1}</span><div><h2>${esc(t(key(L, sc, 'claim')))}</h2><p>${t('kind.' + sc.kind)} · ${t('lk.step', { a: S.st + 1, b: S.steps })}</p>${tn ? `<p class="pv-th">${esc(tn)}</p>` : ''}</div>`;
     $('#pvNote').textContent = has(key(L, sc, 'note')) ? t(key(L, sc, 'note')) : '—'; $('#pvAsk').textContent = has(key(L, sc, 'ask')) ? t(key(L, sc, 'ask')) : '—';
-    const nx = L.scenes[S.sc + 1]; $('#pvNext').textContent = nx ? t(key(L, nx, 'claim')) : '—';
+    const nx = L.scenes[S.sc + 1], nl = nextLesson(L.id); $('#pvNext').textContent = nx ? t(key(L, nx, 'claim')) : nl ? t(S.end ? 'pres.endShown' : 'pres.endNext', { l: t(lessonById(nl).title) }) : t('end.session');
     el.querySelectorAll('#pvList .pv-b').forEach((b, i) => b.classList.toggle('on', i === S.sc));
     const v = S.votes[sc.id]; $('#pvVotes').style.display = sc.kind === 'vote' ? '' : 'none';
     if (sc.kind === 'vote') { const sum = (v || []).reduce((a, b) => a + b, 0) || 1; $('#pvVotes').innerHTML = `<h3>${t('lk.votes', { n: (v || []).reduce((a, b) => a + b, 0) })}</h3>` + ((m) => m ? `<div class="st-l-pi pi-${m.band}"><b>${m.pct} %</b> ${t('pi.' + m.band)}</div>` : '')(mazur(v, sc.vote.opts.findIndex(o => o.ok))) + domMis(sc, v) + optionOrder(sc.vote.opts.length, L.id + '.' + sc.id, S.seed, !!sc.vote.fixed).map((c, d) => `<div class="pv-bar"><b>${LET[d]}</b><i style="width:${Math.round(100 * ((v || [])[c] || 0) / sum)}%"></i><span>${(v || [])[c] || 0}</span></div>`).join(''); }
@@ -349,7 +360,7 @@ function mountPresenter(root, L) {
   const stat = () => { const ok = live && Date.now() - seen < LOST, lost = live && !ok;
     $('#pvStat').textContent = ok ? '🟢 ' + t('pres.connected') : lost ? '🔴 ' + t('pres.lost') : '🟠 ' + t('pres.waiting'); $('#pvStat').className = 'pv-status ' + (ok ? 'ok' : lost ? 'ko' : 'wait');
     $('.pv-open').hidden = ok; el.classList.toggle('pv-off', !ok); };
-  if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'state') { Object.assign(S, m.S); live = true; seen = Date.now(); stat(); draw(); } };
+  if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'state') { Object.assign(S, m.S); live = true; seen = Date.now(); stat(); draw(); } else if (m.t === 'lesson' && m.id !== L.id && lessonById(m.id)) location.hash = '#/stage/' + m.id + '/presenter'; };
   const fmt = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
   const tick = setInterval(() => { $('#pvT').textContent = fmt(Date.now() - t0); $('#pvTs').textContent = fmt(Date.now() - ts); stat(); }, 500);
   draw(); stat(); ch && ch.postMessage({ t: 'hello' });

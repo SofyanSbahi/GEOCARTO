@@ -1,6 +1,6 @@
 # GéoCarto v3.1 — candidat à la livraison (RC1) et liste de contrôle
 
-> Version 1.4 · 2026-10-26 · `3.1.0-rc.5` (rc.5 = rc.4 + ergonomie de la vue enseignant, § 10 ; écran projeté identique). Précédemment `3.1.0-rc.4` (RC2 = RC1 + finition de projection des leçons de topographie, voir § 7). Contenu pédagogique rédigé par la machine : **brouillon à relire par un géologue** (porte de livraison G3 ci-dessous).
+> Version 1.5 · 2026-10-26 · `3.1.0-rc.6` (rc.6 = rc.5 + enchaînement des leçons en séance, § 11 ; écrans de leçon identiques). Précédemment `3.1.0-rc.5` (RC2 = RC1 + finition de projection des leçons de topographie, voir § 7). Contenu pédagogique rédigé par la machine : **brouillon à relire par un géologue** (porte de livraison G3 ci-dessous).
 
 ## 1. Ce que contient la RC1
 Leçons Stage « Cartes géologiques » (15 scènes), « Coupes géologiques » (12 scènes) et préalable « Lire le relief » (3 votes) ; votes mélangés ; fil du raisonnement ; options figurées ; palette de projection ; vue présentateur avec malentendu dominant ; outil d'audit `npm run audit:geology`. Détail : [V3_1_REVIEW.md](V3_1_REVIEW.md), plan et journal : [V3_1_PLAN.md](V3_1_PLAN.md).
@@ -35,7 +35,7 @@ Ne fusionner #1 que si la CI est verte (elle teste `dist/app.js` reproductible).
 3. [ ] **Changer le code enseignant** (M6), vérifier qu'il n'apparaît dans aucun document partagé ; décider d'une licence (code : MIT/Apache ; contenu : CC-BY, après vérification des droits des figures).
 4. [ ] G3 : un relecteur nommé signe `docs/V3_1_REVIEW.md` §1 (date, nom, corrections). Retirer ou conserver la mention « brouillon automatique » selon son avis.
 5. [ ] G4 et G5 dans la salle.
-6. [ ] Passer `package.json` de `3.1.0-rc.5` à `3.1.0` ; étiqueter `v3.1.0` ; notes de version = résumé de la revue.
+6. [ ] Passer `package.json` de `3.1.0-rc.6` à `3.1.0` ; étiqueter `v3.1.0` ; notes de version = résumé de la revue.
 7. [ ] Activer GitHub Pages sur `main` (racine) ; ouvrir l'URL publique en navigation privée ; vérifier `#/stage/prereq`, `#/stage/geocarte`, `#/stage/coupe`, `#/stage/fil`.
 8. [ ] Sauvegarde : archive du dépôt (ou bundle) + export Zenodo si le contenu est ouvert (DOI).
 9. [ ] Ouvrir les tickets « v3.2 » issus de la revue (relecture, essai instrumenté, D « Histoire d'une carte », dette F7/F9, audit en CI).
@@ -83,3 +83,10 @@ Aucune fonction nouvelle (la v3.2 attend l'essai en classe) ; uniquement des dé
 - **État de la liaison** : 🟢 synchronisé / 🟠 en attente / 🔴 projection non détectée (signal toutes les 2 s, perte après 5,5 s), bouton « Ouvrir la fenêtre de projection ».
 - **Grandes commandes** : ◀ / ▶ de 72 px, position scène / étape, boutons ≥ 52 px, votes 76 × 64 px.
 - **Vérifié dans Chromium** : lancement en un clic, → ← Début Fin relayés, votes A A B C 4 Maj+A → 4 votes, Échap/F/H/P non relayés, « . » écran vide relayé, projection fermée → 🔴 en 6 s, réouverture → 🟢 sur la scène en cours ; 197 tests (6 nouveaux, vérifiés par mutation).
+
+## 11. rc.6 — enchaînement des leçons en séance (2026-10-26)
+**Écrans de leçon identiques au pixel** (80 écrans des 10 leçons comparés à rc.5, capture déterministe) ; contenu et pédagogie inchangés. Seul ajout projeté : la **carte de fin**, qui remplace le menu Stage que la salle voyait jusqu'ici en fin de leçon.
+- **Carte de fin** : « ✓ Leçon terminée — <leçon> — Suite : <leçon suivante> → » ; → / Page↓ (télécommande) lance la leçon suivante, ← / Page↑ revient au récapitulatif, Échap ouvre le menu. Après la dernière leçon : « Séance terminée ».
+- **Ordre par défaut** : Prologue → Échelle → Orientation → Coordonnées → Courbes de niveau (relief, thèmes 4-5-6-8) → Pente → Profil → Cartes géologiques → Coupes géologiques. Le préalable « Lire le relief » est **facultatif** : proposé seulement dans la vue enseignant après Profil, il mène ensuite aux cartes géologiques.
+- **Vue enseignant** : boutons ◀ leçon précédente · menu Stage (cette fenêtre) · leçon suivante ▶ (+ préalable après Profil) ; « Ensuite » annonce la leçon suivante sur la dernière scène ; **suivi automatique** quand la projection change de leçon (la liaison reste 🟢).
+- **Vérifié dans Chromium** : chaîne complète des 9 leçons à la télécommande (Page↓) : 9 cartes de fin, vue enseignant qui suit 9 fois sur 9, Page↑ sur la carte → récapitulatif, Échap → menu ; préalable lancé depuis la vue enseignant puis « suivante » → cartes géologiques, projection et vue enseignant synchronisées ; carte lisible en 4:3 amphi (×2,5) et 16:9 ; 203 tests (6 nouveaux, vérifiés par mutation).

@@ -18,3 +18,11 @@ export const TOPICS = [
   { n: 4, id: 'relief', scene: 1 }, { n: 5, id: 'relief', scene: 3 }, { n: 6, id: 'relief', scene: 5 },
   { n: 7, id: 'pente' }, { n: 8, id: 'relief', scene: 7 }, { n: 9, id: 'profil' }, { n: 10, id: 'geocarte' }, { n: 11, id: 'coupe' }
 ];
+
+/* rc.6 — enchaînement des leçons en séance (ordre du cours, au niveau des leçons). « relief » porte les thèmes 4, 5, 6 et 8 : après lui vient
+   « pente » (thème 7). Le préalable « Lire le relief » est FACULTATIF : jamais enchaîné automatiquement, seulement proposé dans la vue enseignant
+   après « profil » ; s'il est joué, il mène aux cartes géologiques. */
+export const SEQUENCE = ['mission', 'echelle', 'orient', 'coord', 'relief', 'pente', 'profil', 'geocarte', 'coupe'];
+export const OPTIONAL = { id: 'prereq', after: 'profil', before: 'geocarte' };
+export const nextLesson = id => id === OPTIONAL.id ? OPTIONAL.before : SEQUENCE[SEQUENCE.indexOf(id) + 1] || null;
+export const prevLesson = id => id === OPTIONAL.id ? OPTIONAL.after : SEQUENCE.indexOf(id) > 0 ? SEQUENCE[SEQUENCE.indexOf(id) - 1] : null;
