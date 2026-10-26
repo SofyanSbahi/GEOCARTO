@@ -273,7 +273,6 @@ export function mountLesson(root, id, arg) {
     if (e.target.closest('.st-l-top,.st-l-rail,.st-l-tools')) return;
     const r = el.getBoundingClientRect(); (e.clientX - r.left) < r.width * .2 ? prev() : act('next');
   });
-  const KEYS = { ArrowRight: 'next', PageDown: 'next', ' ': 'next', Enter: 'next', ArrowLeft: 'prev', PageUp: 'prev', Backspace: 'prev', ArrowUp: 'pup', ArrowDown: 'pdn', b: 'blank', B: 'blank', '.': 'blank', t: 'theme', T: 'theme', '+': 'plus', '=': 'plus', '-': 'minus', _: 'minus', n: 'regen', N: 'regen', f: 'full', F: 'full', p: 'present', P: 'present', h: 'help', H: 'help', '?': 'help', k: 'test', K: 'test', r: 'revote', i: 'hint', I: 'hint', R: 'revote', Escape: 'exit' };
   const onKey = e => {
     if (e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
     const vi = 'abcd'.indexOf(e.key.toLowerCase()), vn = '1234'.indexOf(e.key);
@@ -284,36 +283,61 @@ export function mountLesson(root, id, arg) {
     e.preventDefault(); act(a);
   };
   addEventListener('keydown', onKey);
+  const beat = setInterval(() => post(), BEAT);   // rc.5 : présence pour la vue enseignant (aucun effet à l'écran)
   let idleT = 0; el.addEventListener('pointermove', () => { el.classList.add('act'); clearTimeout(idleT); idleT = setTimeout(() => el.classList.remove('act'), 2600); });
   const onResize = () => render(); addEventListener('resize', onResize);
-  if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'hello') post(); else if (m.t === 'cmd') { if (m.a === 'goto') go(m.v, 0); else if (m.a === 'vote') vote(m.v); else if (m.a === 'unvote') vote(m.v, -1); else act(m.a); } };
+  if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'hello') post(); else if (m.t === 'cmd') { if (m.a === 'goto') go(m.v, 0); else if (m.a === 'home') go(0, 0); else if (m.a === 'end') go(L.scenes.length - 1, 0); else if (m.a === 'vote') vote(m.v); else if (m.a === 'unvote') vote(m.v, -1); else act(m.a); } };
   render();
-  return () => { document.body.classList.remove('stage-on'); clearInterval(timerI); removeEventListener('keydown', onKey); removeEventListener('resize', onResize); ch && ch.close(); el.remove(); };
+  return () => { document.body.classList.remove('stage-on'); clearInterval(timerI); clearInterval(beat); removeEventListener('keydown', onKey); removeEventListener('resize', onResize); ch && ch.close(); el.remove(); };
 }
 
 /* =====================================================================
    PRÉSENTATEUR : notes, question à poser, votes, minuteur, commandes — sur l'écran de l'enseignant
    ===================================================================== */
+/* touches de la projection, partagées avec le présentateur (rc.5) : la fenêtre enseignant RELAIE les mêmes touches à la projection.
+   Ne sont pas relayées : quitter, plein écran (exige un geste dans la fenêtre de projection), aide (s'afficherait aux étudiants), présentateur. */
+const KEYS = { ArrowRight: 'next', PageDown: 'next', ' ': 'next', Enter: 'next', ArrowLeft: 'prev', PageUp: 'prev', Backspace: 'prev', ArrowUp: 'pup', ArrowDown: 'pdn', b: 'blank', B: 'blank', '.': 'blank', t: 'theme', T: 'theme', '+': 'plus', '=': 'plus', '-': 'minus', _: 'minus', n: 'regen', N: 'regen', f: 'full', F: 'full', p: 'present', P: 'present', h: 'help', H: 'help', '?': 'help', k: 'test', K: 'test', r: 'revote', i: 'hint', I: 'hint', R: 'revote', Escape: 'exit' };
+const NO_RELAY = new Set(['exit', 'full', 'help', 'present']);
+const BEAT = 2000, LOST = 5500;                                   // la projection signale sa présence toutes les 2 s ; muette 5,5 s = perdue
+export const projUrl = (id, sc = 1) => location.href.replace(/#.*$/, '') + '#/stage/' + id + '/' + sc;
+export const presUrl = id => location.href.replace(/#.*$/, '') + '#/stage/' + id + '/presenter';
+
 function mountPresenter(root, L) {
   setLang(loadPrefs().lang || 'fr');
   document.body.classList.add('stage-pv');
-  const S = { sc: 0, st: 0, steps: 1, votes: {} }; let live = false, t0 = Date.now(), ts = Date.now(), last = -1;
+  const S = { sc: 0, st: 0, steps: 1, votes: {} }; let live = false, seen = 0, t0 = Date.now(), ts = Date.now(), last = -1;
   const el = h('div', { class: 'pv' }); root.append(el);
-  el.innerHTML = `<h1>${esc(t(L.title))}</h1>${L.draft ? `<p class="pv-warn">${esc(t('th.draft'))}</p>` : ''}<p class="pv-status" id="pvStat"></p><div class="pv-grid"><section class="pv-main"><div class="pv-scene" id="pvScene"></div>
+  el.innerHTML = `<h1>${esc(t(L.title))}</h1>${L.draft ? `<p class="pv-warn">${esc(t('th.draft'))}</p>` : ''}<div class="pv-bar"><p class="pv-status" id="pvStat" role="status" aria-live="polite"></p><button class="pv-b pv-open" data-local="open">${esc(t('pres.openStage'))}</button></div>
+   <div class="pv-guide" id="pvGuide" hidden><b>${esc(t('pres.g.h'))}</b><ol><li>${esc(t('pres.g.1'))}</li><li>${esc(t('pres.g.2'))}</li><li>${esc(t('pres.g.3'))}</li></ol><button class="pv-b" data-local="guide">${esc(t('pres.g.ok'))}</button></div>
+   <div class="pv-nav"><button class="pv-b pv-big" data-a="prev" aria-keyshortcuts="ArrowLeft">◀ ${esc(t('lk.prev'))}</button><span class="pv-pos" id="pvPos"></span><button class="pv-b pv-big pv-next" data-a="next" aria-keyshortcuts="ArrowRight">${esc(t('lk.next'))} ▶</button></div>
+   <div class="pv-grid"><section class="pv-main"><div class="pv-scene" id="pvScene"></div>
    <div class="pv-card"><h3>${t('pres.note')}${L.thread || L.draft ? ' <small class="pv-dr">· ' + esc(t('th.draft')) + '</small>' : ''}</h3><p id="pvNote"></p></div><div class="pv-card ask"><h3>${t('pres.question')}</h3><p id="pvAsk"></p></div><div class="pv-card" id="pvVotes"></div><div class="pv-card"><h3>${t('pres.next')}</h3><p id="pvNext"></p></div></section>
    <section class="pv-side"><div class="pv-card"><h3>${t('pres.timer')}</h3><p class="pv-time"><b id="pvT"></b> · ${t('pres.sceneTimer')} <b id="pvTs"></b></p></div>
    <div class="pv-card"><h3>${t('pres.controls')}</h3><div class="pv-btns">${[['prev', t('lk.prev')], ['next', t('lk.next')], ['pdn', '−'], ['pup', '+'], ['regen', t('lk.regen')], ['blank', t('lk.blank')]].map(([a, l]) => `<button class="pv-b" data-a="${a}">${esc(l)}</button>`).join('')}</div>
    <div class="pv-btns">${[0, 1, 2, 3].map(i => `<button class="pv-b" data-a="vote" data-v="${i}">+ ${LET[i]}</button>`).join('')}<button class="pv-b" data-a="revote">${t('pi.revote')}</button></div><div id="pvPi"></div></div>
+   <div class="pv-card pv-keys"><h3>${esc(t('pres.keys'))}</h3><p>${esc(t('pres.keys.d'))}</p></div>
    <div class="pv-card"><h3>${t('pres.scenes')}</h3><div class="pv-list" id="pvList">${L.scenes.map((s, i) => `<button class="pv-b l" data-a="goto" data-v="${i}">${i + 1}. ${esc(t(key(L, s, 'claim')))}</button>`).join('')}</div></div></section></div>`;
   const $ = s => el.querySelector(s);
   let ch = null; try { ch = new BroadcastChannel('gc-stage-L-' + L.id); } catch (e) { }
   const send = (a, v) => ch && ch.postMessage({ t: 'cmd', a, v });
-  el.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) send(b.dataset.a, b.dataset.v != null ? +b.dataset.v : undefined); });
+  const openProj = () => window.open(projUrl(L.id, S.sc + 1), 'gc-stage-proj', 'popup,width=1280,height=760');
+  el.addEventListener('click', e => { const loc = e.target.closest('[data-local]'); if (loc) { if (loc.dataset.local === 'open') openProj(); else { $('#pvGuide').hidden = true; try { sessionStorage.removeItem('gc_dual'); } catch (er) { } } return; }
+    const b = e.target.closest('[data-a]'); if (b) send(b.dataset.a, b.dataset.v != null ? +b.dataset.v : undefined); });
+  /* rc.5 : les touches de la projection fonctionnent aussi ICI (télécommande de présentation, clavier de l'enseignant) et sont relayées */
+  const onKey = e => {
+    if (e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    const vi = 'abcd'.indexOf(e.key.toLowerCase()), vn = '1234'.indexOf(e.key), sc = L.scenes[S.sc];
+    if (sc && sc.kind === 'vote' && (vi >= 0 || vn >= 0)) { e.preventDefault(); send(e.shiftKey ? 'unvote' : 'vote', vi >= 0 ? vi : vn); return; }
+    if (e.key === 'Home' || e.key === 'End') { e.preventDefault(); send(e.key === 'Home' ? 'home' : 'end'); return; }
+    const a = KEYS[e.key]; if (!a || NO_RELAY.has(a)) return; e.preventDefault(); send(a);
+  };
+  addEventListener('keydown', onKey);
   /* malentendu dominant : la mauvaise réponse la plus choisie, avec sa correction (guide de remédiation, pas de texte propre à la scène) */
   const domMis = (sc, v) => { const tot = v || [], ok = sc.vote.opts.findIndex(o => o.ok); let b = -1; sc.vote.opts.forEach((o, i) => { if (i !== ok && o.mis && (tot[i] || 0) > 0 && (b < 0 || tot[i] > tot[b])) b = i; }); if (b < 0) return ''; const id = sc.vote.opts[b].mis; return has('mis.' + id) ? `<div class="pv-dom"><b>${esc(t('pres.dom'))}</b> : ${esc(t('mis.' + id))}${has('mis.' + id + '.why') ? ' — ' + esc(t('mis.' + id + '.why')) : ''}</div>` : ''; };
   const draw = () => {
     const sc = L.scenes[S.sc]; if (S.sc !== last) { ts = Date.now(); last = S.sc; }
     const tn = threadNote(L, sc);
+    $('#pvPos').textContent = t('pres.pos', { a: S.sc + 1, b: L.scenes.length, c: S.st + 1, d: S.steps || 1 });
     $('#pvScene').innerHTML = `<span class="pv-no">${S.sc + 1}</span><div><h2>${esc(t(key(L, sc, 'claim')))}</h2><p>${t('kind.' + sc.kind)} · ${t('lk.step', { a: S.st + 1, b: S.steps })}</p>${tn ? `<p class="pv-th">${esc(tn)}</p>` : ''}</div>`;
     $('#pvNote').textContent = has(key(L, sc, 'note')) ? t(key(L, sc, 'note')) : '—'; $('#pvAsk').textContent = has(key(L, sc, 'ask')) ? t(key(L, sc, 'ask')) : '—';
     const nx = L.scenes[S.sc + 1]; $('#pvNext').textContent = nx ? t(key(L, nx, 'claim')) : '—';
@@ -321,31 +345,41 @@ function mountPresenter(root, L) {
     const v = S.votes[sc.id]; $('#pvVotes').style.display = sc.kind === 'vote' ? '' : 'none';
     if (sc.kind === 'vote') { const sum = (v || []).reduce((a, b) => a + b, 0) || 1; $('#pvVotes').innerHTML = `<h3>${t('lk.votes', { n: (v || []).reduce((a, b) => a + b, 0) })}</h3>` + ((m) => m ? `<div class="st-l-pi pi-${m.band}"><b>${m.pct} %</b> ${t('pi.' + m.band)}</div>` : '')(mazur(v, sc.vote.opts.findIndex(o => o.ok))) + domMis(sc, v) + optionOrder(sc.vote.opts.length, L.id + '.' + sc.id, S.seed, !!sc.vote.fixed).map((c, d) => `<div class="pv-bar"><b>${LET[d]}</b><i style="width:${Math.round(100 * ((v || [])[c] || 0) / sum)}%"></i><span>${(v || [])[c] || 0}</span></div>`).join(''); }
   };
-  const stat = () => { $('#pvStat').textContent = live ? t('pres.connected') : t('pres.waiting'); $('#pvStat').className = 'pv-status ' + (live ? 'ok' : ''); };
-  if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'state') { Object.assign(S, m.S); live = true; stat(); draw(); } };
+  /* état de la liaison : synchronisé (signal reçu il y a moins de 5,5 s), perdu (projection fermée ou rechargée ailleurs), en attente (jamais vue) */
+  const stat = () => { const ok = live && Date.now() - seen < LOST, lost = live && !ok;
+    $('#pvStat').textContent = ok ? '🟢 ' + t('pres.connected') : lost ? '🔴 ' + t('pres.lost') : '🟠 ' + t('pres.waiting'); $('#pvStat').className = 'pv-status ' + (ok ? 'ok' : lost ? 'ko' : 'wait');
+    $('.pv-open').hidden = ok; el.classList.toggle('pv-off', !ok); };
+  if (ch) ch.onmessage = ev => { const m = ev.data; if (m.t === 'state') { Object.assign(S, m.S); live = true; seen = Date.now(); stat(); draw(); } };
   const fmt = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
-  const tick = setInterval(() => { $('#pvT').textContent = fmt(Date.now() - t0); $('#pvTs').textContent = fmt(Date.now() - ts); }, 500);
+  const tick = setInterval(() => { $('#pvT').textContent = fmt(Date.now() - t0); $('#pvTs').textContent = fmt(Date.now() - ts); stat(); }, 500);
   draw(); stat(); ch && ch.postMessage({ t: 'hello' });
+  try { if (sessionStorage.getItem('gc_dual') === L.id) $('#pvGuide').hidden = false; } catch (er) { }
   if (!ch || location.protocol === 'file:') el.insertBefore(h('p', { class: 'pv-warn' }, t('pres.noSync')), el.children[2]);
-  return () => { document.body.classList.remove('stage-pv'); clearInterval(tick); ch && ch.close(); el.remove(); };
+  return () => { document.body.classList.remove('stage-pv'); clearInterval(tick); removeEventListener('keydown', onKey); ch && ch.close(); el.remove(); };
 }
 
 /* =====================================================================
    INDEX : les 11 thèmes du TP, dans l'ordre du cours
    ===================================================================== */
+/* rc.5 : « projection + vue enseignant » en un clic. Un clic n'autorise qu'UNE fenêtre surgissante : la projection s'ouvre à part,
+   la vue enseignant prend l'onglet courant (où l'enseignant travaille). Si la fenêtre est bloquée, le bouton « Ouvrir la projection » reste là. */
+const dualCard = (card, id, sc) => `<div class="st-ix-w">${card}<button class="st-ix-dual" data-dual="${id}" data-sc="${sc}" title="${esc(t('ix.dual'))}" aria-label="${esc(t('ix.dual'))}">🎙️<span>${esc(t('ix.dual.s'))}</span></button></div>`;
 export function lessonIndex(root) {
   setLang(loadPrefs().lang || 'fr');
+  root.onclick = e => { const b = e.target.closest('[data-dual]'); if (!b) return; e.preventDefault(); const id = b.dataset.dual;
+    window.open(projUrl(id, +b.dataset.sc), 'gc-stage-proj', 'popup,width=1280,height=760'); try { sessionStorage.setItem('gc_dual', id); } catch (er) { } location.hash = '#/stage/' + id + '/presenter'; };
   const cards = TOPICS.map(tp => {
     const L = tp.id ? lessonById(tp.id) : null;
     const min = L ? (tp.scene ? 0 : L.scenes.reduce((a, s) => a + (s.min || 2), 0)) : 0;
     const href = L && !L.planned ? `#/stage/${L.id}${tp.scene ? '/' + tp.scene : ''}` : tp.legacy ? `#/stage/${tp.legacy.deck}/${tp.legacy.scene}` : null;
     const state = L && !L.planned ? 'v2' : tp.legacy ? 'v1' : 'plan';
     const inner = `<span class="st-ix-n">${tp.n}</span><span class="st-ix-b"><b>${esc(t('topic.' + tp.n))}</b><small>${esc(t('topic.' + tp.n + '.d'))}</small></span><span class="st-ix-s st-ix-${state}">${t('ix.' + state)}${min ? ` · ${min} min` : ''}</span>`;
-    return href ? `<a class="st-ix-c" href="${href}">${inner}</a>` : `<div class="st-ix-c off">${inner}</div>`;
+    return !href ? `<div class="st-ix-c off">${inner}</div>` : state === 'v2' ? dualCard(`<a class="st-ix-c" href="${href}">${inner}</a>`, L.id, tp.scene || 1) : `<a class="st-ix-c" href="${href}">${inner}</a>`;
   }).join('');
-  const pro = lessonById('mission'), proCard = pro ? `<a class="st-ix-c st-ix-pro" href="#/stage/mission"><span class="st-ix-n">0</span><span class="st-ix-b"><b>${esc(t('ix.pro'))}</b><small>${esc(t('ix.pro.d'))}</small></span><span class="st-ix-s st-ix-v2">${t('ix.v2')} · ${pro.scenes.reduce((a, s) => a + (s.min || 2), 0)} min</span></a>` : '';
-  const pre = lessonById('prereq'), preCard = pre ? `<a class="st-ix-c st-ix-pro" href="#/stage/prereq"><span class="st-ix-n">↺</span><span class="st-ix-b"><b>${esc(t('ix.pre'))}</b><small>${esc(t('ix.pre.d'))}</small></span><span class="st-ix-s st-ix-v2">${esc(t('th.draft'))} · ${pre.scenes.reduce((a, s) => a + (s.min || 2), 0)} min</span></a>` : '';
+  const pro = lessonById('mission'), proCard = pro ? dualCard(`<a class="st-ix-c st-ix-pro" href="#/stage/mission"><span class="st-ix-n">0</span><span class="st-ix-b"><b>${esc(t('ix.pro'))}</b><small>${esc(t('ix.pro.d'))}</small></span><span class="st-ix-s st-ix-v2">${t('ix.v2')} · ${pro.scenes.reduce((a, s) => a + (s.min || 2), 0)} min</span></a>`, 'mission', 1) : '';
+  const pre = lessonById('prereq'), preCard = pre ? dualCard(`<a class="st-ix-c st-ix-pro" href="#/stage/prereq"><span class="st-ix-n">↺</span><span class="st-ix-b"><b>${esc(t('ix.pre'))}</b><small>${esc(t('ix.pre.d'))}</small></span><span class="st-ix-s st-ix-v2">${esc(t('ix.draftShort'))} · ${pre.scenes.reduce((a, s) => a + (s.min || 2), 0)} min</span></a>`, 'prereq', 1) : '';
   root.innerHTML = `<h1>🎞️ ${t('ix.title')}</h1><p class="lead">${t('ix.lead')}</p><div class="st-ix">${proCard}${preCard}${cards}</div>
    <div class="box tip"><b class="t">💡</b>${t('ix.tip')}</div>
+   <p class="st-ix-dualhelp">${esc(t('ix.dual.d'))}</p>
    <p><a class="btn" href="#/stage/courbes/presenter">${t('ix.v1pres')}</a> <a class="btn" href="#/stage/fil">${t('th.title')}</a> <a class="btn" href="#/stage/lib">${t('lib.title')}</a> <a class="btn" href="#/stage/bilan">${t('bilan.title')}</a></p>`;
 }

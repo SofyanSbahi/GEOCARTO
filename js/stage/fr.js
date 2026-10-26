@@ -103,5 +103,9 @@ register('fr', {
   'pres.timer': 'Temps écoulé', 'pres.sceneTimer': 'Sur cette scène', 'pres.scenes': 'Scènes', 'pres.controls': 'Commandes',
   'pres.preview': 'Aperçu de la salle', 'pres.waiting': 'En attente de la fenêtre de projection…',
   'pres.noSync': 'Les deux fenêtres doivent être ouvertes depuis le même site (http, https ou localhost). Depuis un fichier local (file://), la synchronisation est bloquée par le navigateur.',
-  'pres.openStage': 'Ouvrir la fenêtre de projection', 'pres.connected': 'Connecté à la projection'
+  'pres.openStage': 'Ouvrir la fenêtre de projection', 'pres.connected': 'Synchronisé avec la projection',
+  'pres.lost': 'Projection non détectée (fermée ou rechargée ?) : rouvrez-la ou cliquez dedans', 'pres.pos': 'Scène {a} / {b} · étape {c} / {d}',
+  'pres.keys': 'Raccourcis (dans cette fenêtre)', 'pres.keys.d': '→ Espace Entrée Page↓ : suivant · ← Page↑ : précédent · Début / Fin · ↑ ↓ : paramètre · A B C D ou 1 2 3 4 : vote (Maj = retirer) · R : revote · I : indication · . (ou B hors vote) : écran vide · N : autre terrain · T : thème · + − : taille de salle · K : test du dernier rang. Plein écran : touche F DANS la fenêtre de projection.',
+  'pres.g.h': 'Deux écrans : trois gestes', 'pres.g.1': 'Glissez la fenêtre de projection sur le vidéoprojecteur.', 'pres.g.2': 'Cliquez dans la projection, puis touche F (plein écran).', 'pres.g.3': 'Pilotez depuis cette fenêtre : flèches, A–D, ou les grands boutons.', 'pres.g.ok': 'Compris',
+  'ix.draftShort': 'Brouillon à relire', 'ix.dual': 'Ouvrir la projection et la vue enseignant', 'ix.dual.s': 'Projection + vue enseignant', 'ix.dual.d': '🎙️ « Projection + vue enseignant » : ouvre la projection dans une nouvelle fenêtre et la vue enseignant ici, déjà synchronisées.'
 });
