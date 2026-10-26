@@ -21,7 +21,7 @@ const srv = http.createServer((req, res) => {
 srv.listen(0, '127.0.0.1', () => {
   const url = `http://127.0.0.1:${srv.address().port}/index.html`;
   const args = [path.join(root, 'tools/stage/stage_gate.mjs'), '--url', url, '--lessons', arg('lessons', 'geocarte,coupe,prereq')];
-  if (process.argv.includes('--quick')) args.push('--quick');
+  for (const f of ['--quick', '--all']) if (process.argv.includes(f)) args.push(f);
   /* spawn asynchrone : le serveur doit rester réactif pendant que la porte tourne */
   spawn(process.execPath, args, { stdio: 'inherit', cwd: root }).on('exit', code => { srv.close(); process.exit(code ?? 1); });
 });

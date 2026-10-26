@@ -114,7 +114,7 @@ body.stage-on main,body.stage-pv main{padding:0;margin:0;max-width:none}
 .st-l-text .st-l-mis{display:block;margin-top:calc(var(--uc)*.5);font-size:.72em;font-weight:700}
 .st-l-side{flex:none;display:flex;align-items:center;gap:calc(var(--uc)*1.6)}
 .st-l-par{display:flex;align-items:center;gap:calc(var(--uc)*1)}
-.st-l-pv{min-width:calc(var(--uc)*17);text-align:center;font-weight:800;font-size:calc(var(--uc)*3.8);padding:calc(var(--uc)*.8) calc(var(--uc)*1.4);background:var(--st-card);border:calc(var(--uc)*.22) solid var(--st-line);border-radius:calc(var(--uc)*1.2)}
+.st-l-pv{min-width:calc(var(--uc)*17);max-width:28vw;text-align:center;font-weight:800;font-size:calc(var(--uc)*3.8);padding:calc(var(--uc)*.8) calc(var(--uc)*1.4);background:var(--st-card);border:calc(var(--uc)*.22) solid var(--st-line);border-radius:calc(var(--uc)*1.2)}
 .st-l-tally{font-size:calc(var(--uc)*3.8);font-weight:800;color:var(--st-mute);white-space:nowrap}
 .st-l-timer{--p:1;display:flex;flex-direction:column;align-items:stretch;gap:calc(var(--uc)*.7);min-width:calc(var(--uc)*17)}
 .st-l-timer b{order:-1;font-size:calc(var(--uc)*7);line-height:1;font-weight:800;text-align:center;font-variant-numeric:tabular-nums}

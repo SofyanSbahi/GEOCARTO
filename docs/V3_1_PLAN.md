@@ -173,6 +173,7 @@ Taille : S petite · M moyenne · L grande. Ordre d'exécution : WP0 → WP1 →
 | 2026-10-22 | **WP3 réalisé** (v1.3) : options figurées. 162 tests. |
 | 2026-10-22 | **WP4 réalisé** (v1.4) : leçon préalable « Lire le relief » (brouillon à relire). 172 tests. |
 | 2026-10-22 | **WP5, WP6, WP7 réalisés** (v1.5) : palette de projection, liserés, aide enseignant, outil d'audit, livraison. 179 tests. Voir `docs/V3_1_REVIEW.md`. |
+| 2026-10-26 | **RC2 — finition de projection** : défauts des leçons de topographie et flèche du préalable corrigés (voir `V3_1_RELEASE.md` § 7). 180 tests. |
 
 ## 10. État d'avancement
 

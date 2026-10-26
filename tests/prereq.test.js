@@ -20,7 +20,7 @@ test('vote 1 : P et Q sont sur la même courbe, donc à la même altitude, et ne
   const f = FIGS.v1(); assert.equal(f.zP, f.zQ); assert.ok(Math.hypot(f.P[0] - f.Q[0], f.P[1] - f.Q[1]) > 15);
 });
 test('vote 2 : l’altitude baisse bien de P vers Q (bonne réponse « Descend »), points distincts', () => {
-  const f = FIGS.v2(); assert.ok(f.zP > f.zQ); assert.ok(Math.hypot(f.P[0] - f.Q[0], f.P[1] - f.Q[1]) > 8);
+  const f = FIGS.v2(); assert.ok(f.zP > f.zQ); assert.ok(Math.hypot(f.P[0] - f.Q[0], f.P[1] - f.Q[1]) > 15, 'flèche P → Q assez longue pour le dernier rang');
 });
 test('vote 3 : la pointe encerclée est le point le plus haut de la courbe, dans la carte', () => {
   const f = FIGS.v3(); assert.ok(f.up); assert.ok(f.apex[1] > 19 && f.apex[0] > 4 && f.apex[0] < 86);

@@ -18,6 +18,8 @@
 
 **Mesures de clôture** : 179 tests verts ; porte de projection sur rendu réel, **1 744 écrans, 176 votes simulés, 4 formats × 4 échelles de salle (×0,8 à ×2,5) : 0 défaut** (texte hors carte, recouvrements, rognage, légende tronquée, figure < 50 % / 45 %, textes sous les tailles minimales, intégrité lettre ↔ vote). Chaque lot a été contrôlé par mutations volontaires (le test échoue quand on casse la règle).
 
+**Mesures RC2 (2026-10-26)** : 180 tests verts ; porte de projection étendue à **toutes les leçons Stage** (10 leçons, topographie comprise) : **4 608 écrans, 368 votes simulés, 4 formats × 4 échelles de salle : 0 défaut** (avant la finition : 81 défauts, tous dans les leçons de topographie).
+
 ## 2. Améliorations pédagogiques
 - **On ne peut plus réussir en répondant « A »** : avant, la bonne réponse était A dans 16 votes de géologie sur 20.
 - **Le vote devient un diagnostic** : chaque mauvaise réponse est un malentendu nommé, souvent montré comme figure ; l'enseignant voit le malentendu dominant, pas seulement un pourcentage.
@@ -31,8 +33,8 @@ Hiérarchie typographique bornée (rien sous le seuil du dernier rang), figure t
 ## 4. Limites restantes (honnêtes)
 1. **Aucun test avec des étudiants ni en salle réelle.** Les ΔE, le « délavage » et le daltonisme sont simulés ; le seuil 10 est une règle empirique.
 2. **Contenu non relu par un géologue** : fil, notes, leçon préalable, malentendus, solutions. Les faits des six modèles marocains et les droits des figures restent non vérifiés (hérité).
-3. **Résidus connus** : bulles recouvrant du texte à 4:3 / amphi dans *coord, échelle, orient, mission* ; légende rognée dans *orient/2* (identiques avant/après, hors géologie) ; vide dans *geocarte/14* et *coupe/7* (F9) ; largeur adaptative des cartes de texte (F7) non faite.
-4. **Vote 2 du préalable** : la flèche P→Q est courte sur la colline de démonstration (lisible, à agrandir).
+3. **Résidus de projection : corrigés en RC2** (2026-10-26) — bulles recouvrant du texte et légende écrasée dans *coord, échelle, orient, mission, relief, pente, profil* (4:3 et amphi). Restent hors périmètre : vide dans *geocarte/14* et *coupe/7* (F9) et largeur adaptative des cartes de texte (F7).
+4. **Vote 2 du préalable : corrigé en RC2** — colline adoucie, flèche P → Q horizontale et deux fois plus longue, altitudes écartées de la flèche.
 5. **Hachures non faites** (décision : lettres + palette) ; à reprendre si un étudiant daltonien signale un problème.
 6. **Pas d'évaluation d'apprentissage** : aucun pré/post-test, aucune analyse d'items ; l'éthique est un préalable pour en publier.
 7. **Livraison** : branche non poussée (403 GitHub) ; pas de LICENSE ; code enseignant en clair dans le code client (à nettoyer, M6) ; l'audit de projection n'est pas dans la CI.

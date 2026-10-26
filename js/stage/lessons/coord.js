@@ -25,16 +25,19 @@ export const coord = {
       fig: (st, p, X) => {
         const W = world(12, 4, 136, 58), M = PTS[0], x = W.X(M.lon), y = W.Y(M.lat);
         let o = graticule(W) + circ(x, y, 1.9, { fill: C.acc }) + tag(x + 6, y - 4.5, 'M', { size: 5, fill: C.acc });
-        o += at(st, 1, line(W.x0, y, W.x0 + W.w, y, { c: C.blue, w: 1 }) + tag(112, y - 4, 'φ = ' + fmtLat(M.lat, X.nf), { size: 4.8, fill: C.blue }));
-        o += at(st, 2, line(x, W.y0, x, W.y0 + W.h, { c: C.green, w: 1 }) + tag(x + 20, W.y0 + 6, 'λ = ' + fmtLon(M.lon, X.nf), { size: 4.8, fill: C.green }));
+        /* φ sous le parallèle (à droite), λ le long du méridien (en bas) : jamais sur l'étiquette M, à toute échelle de salle */
+        o += at(st, 1, line(W.x0, y, W.x0 + W.w, y, { c: C.blue, w: 1 }) + tag(W.x0 + W.w - 1, y + 3 + 3.6 * K.fsz(), 'φ = ' + fmtLat(M.lat, X.nf), { size: 4.8, fill: C.blue, anchor: 'end' }));
+        o += at(st, 2, line(x, W.y0, x, W.y0 + W.h, { c: C.green, w: 1 }) + tag(x + 2.5, W.y0 + W.h - 2 - 3.6 * K.fsz(), 'λ = ' + fmtLon(M.lon, X.nf), { size: 4.8, fill: C.green, anchor: 'start' }));
         return o;
       } },
     { id: 'signs', kind: 'show', steps: 4, min: 3, param: { values: PTS, start: 0, label: (v, i, X) => `${fmtLat(v.lat, X.nf)} · ${fmtLon(v.lon, X.nf)}` },
       fig: (st, pt, X) => {
         const W = world(12, 4, 136, 58);
-        let o = graticule(W) + txt(W.X(0) + 14, W.Y(0) - 3, X.t('coord.eq'), { size: 3.8, w: 800 }) + txt(W.X(0) + 16, W.y0 + W.h - 3.6, X.t('coord.gw'), { size: 3.8, w: 800 });
-        o += at(st, 1, tag(130, W.Y(45), 'N  ( + )', { size: 5.4, fill: C.blue }) + tag(130, W.Y(-45), 'S  ( − )', { size: 5.4, fill: C.brown }), { fade: true });
-        o += at(st, 2, tag(W.X(-95), W.Y(70), 'O  ( − )', { size: 5.4, fill: C.brown }) + tag(W.X(95), W.Y(70), 'E  ( + )', { size: 5.4, fill: C.blue }), { fade: true });
+        let o = graticule(W) + txt(W.X(-90), W.Y(0) - 3, X.t('coord.eq'), { size: 3.8, w: 800 }) + txt(W.X(0) + 16, W.y0 + W.h - 3.6, X.t('coord.gw'), { size: 3.8, w: 800 });
+        /* O/E sur la bande du haut, N/S plus bas à droite : séparés d'au moins une hauteur d'étiquette, même agrandis (salle, 4:3) */
+        const th = 5.4 * K.fsz() * 1.5, yOE = W.y0 + th / 2 + .5, yN = Math.max(W.Y(45), yOE + th + 1), yS = Math.min(W.Y(-45), W.y0 + W.h - th / 2 - 6);
+        o += at(st, 1, tag(130, yN, 'N  ( + )', { size: 5.4, fill: C.blue }) + tag(130, yS, 'S  ( − )', { size: 5.4, fill: C.brown }), { fade: true });
+        o += at(st, 2, tag(W.X(-95), yOE, 'O  ( − )', { size: 5.4, fill: C.brown }) + tag(W.X(95), yOE, 'E  ( + )', { size: 5.4, fill: C.blue }), { fade: true });
         o += at(st, 3, line(W.x0, W.Y(pt.lat), W.x0 + W.w, W.Y(pt.lat), { c: C.blue, w: .8, dash: '2 1.4' }) + line(W.X(pt.lon), W.y0, W.X(pt.lon), W.y0 + W.h, { c: C.green, w: .8, dash: '2 1.4' }) + circ(W.X(pt.lon), W.Y(pt.lat), 2, { fill: C.acc }));
         return o;
       } },
@@ -48,9 +51,12 @@ export const coord = {
         for (let j = 0; j <= rows; j++) o += txt(x0 - 1.4, y0 + (rows - j) * cs, String(Y0 + j), { size: 3.6, anchor: 'end', w: 700 });
         o += circ(px, py, 1.9, { fill: C.acc }) + tag(px + 5.5, py - 3.6, 'P', { size: 4.6, fill: C.acc });
         const xv = X0 + p.x, yv = Y0 + p.y;
-        o += at(st, 1, line(px, py, px, y0 + rows * cs, { c: C.blue, w: .9 }) + tag(125, 16, 'X = ' + X.nf(xv, 2) + ' km', { size: 6.4, fill: C.blue }) + txt(125, 25, X.t('coord.right'), { size: 4.2, fill: C.mute, w: 600 }));
-        o += at(st, 2, line(px, py, x0, py, { c: C.red, w: .9 }) + tag(125, 36, 'Y = ' + X.nf(yv, 2) + ' km', { size: 6.4, fill: C.red }) + txt(125, 45, X.t('coord.up'), { size: 4.2, fill: C.mute, w: 600 }));
-        o += at(st, 3, rect(98, 52, 56, 12, { fill: '#fff6d6', stroke: C.ink, w: .6, rx: 2 }) + txt(126, 58.2, `P ( ${X.nf(xv, 2)} ; ${X.nf(yv, 2)} )`, { size: 4.6, w: 800 }));
+        /* colonne de droite empilée d'après les tailles réelles (salle, 4:3) : étiquette, consigne, étiquette, consigne, résultat — sans chevauchement ni débord sur la grille */
+        const fs = K.fsz(), ts = Math.min(6.4, 8.4 / fs), hT = ts * fs * 1.5, ns = 4.2 * fs, cx = 88 + (158 - 88) / 2;
+        const y1 = 3 + hT / 2, n1 = y1 + hT / 2 + .7 * ns, y2 = n1 + .7 * ns + 1.5 + hT / 2, n2 = y2 + hT / 2 + .7 * ns, yb = Math.min(57, Math.max(52, n2 + .7 * ns + 1));
+        o += at(st, 1, line(px, py, px, y0 + rows * cs, { c: C.blue, w: .9 }) + tag(cx, y1, 'X = ' + X.nf(xv, 2) + ' km', { size: ts, fill: C.blue }) + txt(cx, n1, X.t('coord.right'), { size: 4.2, fill: C.mute, w: 600 }));
+        o += at(st, 2, line(px, py, x0, py, { c: C.red, w: .9 }) + tag(cx, y2, 'Y = ' + X.nf(yv, 2) + ' km', { size: ts, fill: C.red }) + txt(cx, n2, X.t('coord.up'), { size: 4.2, fill: C.mute, w: 600 }));
+        o += at(st, 3, rect(cx - 33, yb, 66, 12, { fill: '#fff6d6', stroke: C.ink, w: .6, rx: 2 }) + txt(cx, yb + 6.2, `P ( ${X.nf(xv, 2)} ; ${X.nf(yv, 2)} )`, { size: 4.6, w: 800 }));
         return o;
       } },
     { id: 'v1', kind: 'vote', min: 2,

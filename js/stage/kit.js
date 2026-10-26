@@ -68,6 +68,8 @@ export function tag(x, y, s, o = {}) {
   const nx = Math.min(Math.max(x0, 1), Math.max(1, W - 1 - w)); x = x + (nx - x0); x0 = nx;
   return rect(x0, y - h / 2, w, h, { fill: o.fill || C.ink, rx: h * .28, op: o.op, cls: 'fp' }) + txt(ax === 'start' ? x + 1.5 : ax === 'end' ? x - 1.5 : x, y + .1, s, { size: o.size || 4, fill: o.color || '#fff', anchor: ax, halo: false, w: 800 });
 }
+/* étiquette d'une seule ligne qui ne dépasse jamais maxW unités : la taille baisse (jamais sous MIN) quand la salle ou le format l'agrandit */
+export const tagFit = (x, y, s, maxW, o = {}) => tag(x, y, s, { ...o, size: Math.max(MIN, Math.min(o.size || 4, (maxW - 4) / (String(s).length * .6 * K.fs))) });
 /* retour à la ligne glouton (n caractères max par ligne) */
 export const wrap = (s, n) => { const w = String(s).split(' '), out = []; let c = ''; for (const x of w) { if ((c + ' ' + x).trim().length > n && c) { out.push(c); c = x; } else c = (c + ' ' + x).trim(); } if (c) out.push(c); return out; };
 /* choisit la plus grande taille (≤ size0 × facteur de salle) pour laquelle `label` tient dans W unités sur ≤ maxLines lignes ; jamais sous MIN */

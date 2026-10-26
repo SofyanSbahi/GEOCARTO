@@ -36,7 +36,7 @@ export const orient = {
         o += at(st, 1, arrow(O[0], O[1], nm[0], nm[1], { c: C.blue, w: 1.1, head: 3 }) + txt(nm[0] - 4, nm[1] - 4.6, 'NM', { size: 5, fill: C.blue, w: 800 }) + path(arc(O[0], O[1], 30, -d, 0), { stroke: C.blue, w: .8 }) + txt(O[0] - 8, O[1] - 33, `${d}°`, { size: 4.6, fill: C.blue }));
         o += at(st, 2, arrow(O[0], O[1], nl[0], nl[1], { c: C.green, w: 1.1, head: 3 }) + txt(nl[0] + 7, nl[1] - 3, 'NL', { size: 5, fill: C.green, w: 800 }));
         const rows = [['NG', X.t('orient.ng'), C.ink], ['NM', X.t('orient.nm'), C.blue], ['NL', X.t('orient.nl'), C.green]];
-        rows.forEach((r, i) => { if (st === i) { const f = K.fit(r[1], 56, 4.8, 3); o += at(st, i, tag(98, 24, r[0], { size: 5.6, fill: r[2], anchor: 'start' }) + K.txtL(98, 33, f.lines, { size: f.size, anchor: 'start', w: 800 })); } });
+        rows.forEach((r, i) => { if (st === i) { const f = K.fit(r[1], 56, 4.8, 3); o += at(st, i, tag(98, 24, r[0], { size: 5.6, fill: r[2], anchor: 'start' }) + K.txtL(98, 24 + 5.6 * K.fsz() * .75 + f.size * .9, f.lines, { size: f.size, anchor: 'start', w: 800, fixed: true }));   /* fit applique déjà le facteur de salle : fixed évite de l'appliquer deux fois */ } });
         return o;
       } },
     { id: 'azimuth', kind: 'build', steps: 4, min: 3, param: { values: [52, 130, 245, 318], start: 0, label: (v) => v + '°' },
@@ -51,7 +51,7 @@ export const orient = {
       } },
     { id: 'v1', kind: 'vote', min: 2,
       vote: { opts: [{ ok: true }, { mis: 'o-sens' }, { mis: 'o-secteur' }, { mis: 'o-axe' }],
-        draw: (st, X) => rose(46, 40, 21) + seg(46, 40, 18.5, 70) + tag(46, 5.6, X.t('orient.v1.top'), { size: 4.8, fill: C.ink }) },
+        draw: (st, X) => rose(46, 42, 19) + seg(46, 42, 16.5, 70) + tag(46, 5.6, X.t('orient.v1.top'), { size: 4.8, fill: C.ink }) },   /* rose plus basse et plus petite : le titre agrandi ne recouvre plus « N » */
       q: 1 },
     { id: 'pr', kind: 'practice', min: 3, practice: { ch: 'orient', seconds: 60 } },
     { id: 'recap', kind: 'recap', steps: 4, min: 1,
