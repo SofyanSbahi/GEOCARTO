@@ -34,3 +34,6 @@
 
 ## 4. À observer pendant l'essai (ajout possible à la fiche d'observation)
 - Temps de mise en place des deux fenêtres ; nombre de pertes de synchronisation ; touches ou boutons réellement utilisés ; besoin d'une télécommande ou d'une tablette.
+
+## 5. rc.6 — enchaînement des leçons
+Fait : carte de fin de leçon, passage à la leçon suivante au clavier ou à la télécommande, navigation entre leçons et suivi automatique dans la vue enseignant (voir `V3_1_RELEASE.md` § 11). À évaluer après l'essai : **plan de séance choisi** depuis l'index (par ex. Échelle → Orientation → Coordonnées seulement).

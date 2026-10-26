@@ -223,3 +223,11 @@ a.st-ix-c:hover{border-color:var(--pri)}.st-ix-c.off{opacity:.6}
 .st-ix-w{display:flex;flex-direction:column}.st-ix-w>.st-ix-c{flex:1;border-bottom-left-radius:0;border-bottom-right-radius:0}
 .st-ix-dual{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:6px 10px;border:2px solid var(--line);border-top:0;border-radius:0 0 14px 14px;background:var(--pri-l,#d9f0ea);color:var(--pri);font:800 .95rem/1.2 system-ui,sans-serif;cursor:pointer}
 .st-ix-dual:hover,.st-ix-dual:focus-visible{background:var(--pri);color:#fff}.st-ix-dualhelp{color:var(--mute)}
+/* rc.6 — carte de fin de leçon (projection) : n'apparaît qu'APRÈS la dernière étape ; aucun écran de leçon n'est modifié */
+.st-l-end{position:absolute;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:var(--st-bg)}.st-l-end.on{display:flex}
+.st-l-endin{text-align:center;max-width:86%}.st-l-endin h2{margin:0;font-size:calc(var(--uc,10px)*7.2);line-height:1.12;color:var(--st-ink)}
+.st-l-endok{margin:0 0 calc(var(--uc,10px)*1.6);font-size:calc(var(--uc,10px)*4.4);font-weight:800;color:var(--st-pri)}
+.st-l-endnx{margin:calc(var(--uc,10px)*3.6) 0 0;font-size:calc(var(--uc,10px)*5);font-weight:700;color:var(--st-ink)}.st-l-endnx b{color:var(--st-pri)}
+.st-l-endh{margin:calc(var(--uc,10px)*3) 0 0;font-size:calc(var(--uc,10px)*4.3);color:var(--st-mute);font-weight:600}
+/* rc.6 — vue enseignant : navigation entre leçons */
+.pv-lnav{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 14px}.pv-lnav .pv-b{flex:1 1 auto}.pv-lnav .pv-lnext{border-color:var(--pri);color:var(--pri)}
